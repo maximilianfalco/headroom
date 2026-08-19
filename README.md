@@ -11,6 +11,8 @@
 ![WidgetKit](https://img.shields.io/badge/WidgetKit-small%20%C2%B7%20medium%20%C2%B7%20large-purple)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
+<img src="assets/menu-bar-panel.png" width="470" alt="The Headroom panel in the menu bar">
+
 </div>
 
 A menu bar app and a desktop widget. They show how much of your Claude plan you have used, how
@@ -29,6 +31,8 @@ this session and for today, plus how fast you are spending them.
 **On the desktop**, pick a size. Small shows your worst limit as a ring. Medium lists every
 limit as bars. Large leads with a ring and lists the rest below it. Right click the desktop and
 pick Edit Widgets, or open Notification Center, then search for "Headroom".
+
+<img src="assets/desktop-widget.png" width="420" alt="The medium widget on the desktop">
 
 You can also pick which limit a widget follows, or leave it on whichever is highest.
 
