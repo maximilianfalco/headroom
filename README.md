@@ -1,4 +1,17 @@
+<div align="center">
+
+<img src="Headroom/Assets.xcassets/AppIcon.appiconset/icon_256x256.png" width="128" alt="Headroom app icon">
+
 # Headroom
+
+**How much of your Claude plan is left, at a glance.**
+
+![macOS](https://img.shields.io/badge/macOS-14%2B-blue)
+![Swift](https://img.shields.io/badge/Swift-5-orange)
+![WidgetKit](https://img.shields.io/badge/WidgetKit-small%20%C2%B7%20medium%20%C2%B7%20large-purple)
+![License](https://img.shields.io/badge/license-MIT-green)
+
+</div>
 
 Menu bar app plus a macOS widget showing current usage against your Claude plan limits.
 
@@ -131,11 +144,45 @@ prefers the group container automatically when the key is present.
   `WidgetCenter.reloadAllTimelines()`, but WidgetKit refreshes on a system budget. The menu
   bar number is exact; the widget lags behind it. The timeline policy is a 15 minute
   safety net for when the app is not running.
-- **Token refresh is not implemented.** Claude Code refreshes the keychain item itself. If
-  the token expires the app surfaces "Token expired, open Claude Code to refresh".
+- **No OAuth refresh flow.** Claude Code refreshes its own credential. When Headroom's cached
+  copy expires it re-reads Claude Code's keychain item silently, and only if that read would
+  need a prompt does the panel fall back to a Reconnect button.
+- **No test suite.** Nothing is covered by automated tests yet.
 - **Ad-hoc signing means no notarization.** Fine locally. Moving this to another Mac would
   need real signing.
 
+## Privacy
+
+- **Your numbers stay on your Mac.** Token counts and cost come from Claude Code's own log
+  files in `~/.claude/projects/`. Headroom pulls out numbers only: how many tokens, which
+  model, when, and an id it uses to skip repeats. It never keeps what you or Claude typed,
+  and it never keeps which project you were in.
+- **One server, one call.** Headroom talks to `api.anthropic.com` and nothing else. No update
+  check, no analytics, no crash reports. The call sends your token so the server knows who is
+  asking. It sends nothing else.
+- **Keychain.** Headroom reads Claude Code's saved login, then keeps a copy of the token in
+  its own keychain item. The 60 second poll asks in a way that cannot open a popup. Only the
+  refresh arrow and the Reconnect button can. The token never lands on disk.
+- **What it saves.** One small file holding your percentages, token counts, and cost, plus a
+  few notification settings. Nothing else.
+- **Why it is not sandboxed.** A sandboxed app cannot read another app's keychain item. The
+  widget *is* sandboxed. It only reads that small file, and it carries none of the code that
+  handles logins or reads logs.
+
 ## License
 
-MIT. See [LICENSE](LICENSE).
+MIT, see [LICENSE](LICENSE). That covers the code in this repo. It gives you no rights to
+anyone else's name, service, or data.
+
+Headroom is a personal project. Anthropic did not build it, back it, or review it. "Claude"
+and "Anthropic" are their names, not this project's.
+
+- It reads an endpoint Anthropic has not documented. They can change or drop it any day. See
+  [Data source](#data-source).
+- It only ever reads your own login and your own logs, on your own Mac.
+- The dollar figures are what the same work would cost on the API. Your plan is a flat fee, so
+  read them as a size, not a bill.
+- Free to use.
+- Own a right and see a problem here? Open an issue.
+
+*No warranty. Not legal advice.*
