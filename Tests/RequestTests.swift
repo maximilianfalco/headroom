@@ -86,8 +86,8 @@ struct UsageRequestTests {
 
 struct SnapshotDirectoryTests {
     @Test(arguments: [
-        ("com.falco.Headroom", "com.falco.Headroom.Widget"),
-        ("com.falco.Headroom.Widget", "com.falco.Headroom.Widget"),
+        ("app.headroom", "app.headroom.Widget"),
+        ("app.headroom.Widget", "app.headroom.Widget"),
         (nil as String?, ".Widget"),
     ])
     func widgetIdIsDerivedOnceOnly(bundleID: String?, expected: String) {
@@ -97,16 +97,16 @@ struct SnapshotDirectoryTests {
     @Test("the app appends the widget's container to its own home")
     func appWritesIntoTheWidgetContainer() {
         let directory = UsageStore.fallbackDirectory(home: URL(fileURLWithPath: "/Users/x"),
-                                                     widgetBundleID: "com.falco.Headroom.Widget")
-        #expect(directory.path == "/Users/x/Library/Containers/com.falco.Headroom.Widget/Data"
+                                                     widgetBundleID: "app.headroom.Widget")
+        #expect(directory.path == "/Users/x/Library/Containers/app.headroom.Widget/Data"
                 + "/Library/Application Support/Headroom")
     }
 
     @Test("inside the sandboxed widget the container is not appended twice")
     func widgetDoesNotDoubleUpItsOwnContainer() {
-        let home = URL(fileURLWithPath: "/Users/x/Library/Containers/com.falco.Headroom.Widget/Data")
+        let home = URL(fileURLWithPath: "/Users/x/Library/Containers/app.headroom.Widget/Data")
         let directory = UsageStore.fallbackDirectory(home: home,
-                                                     widgetBundleID: "com.falco.Headroom.Widget")
+                                                     widgetBundleID: "app.headroom.Widget")
         #expect(directory.path == home.path + "/Library/Application Support/Headroom")
     }
 }
