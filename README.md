@@ -135,3 +135,7 @@ prefers the group container automatically when the key is present.
   the token expires the app surfaces "Token expired, open Claude Code to refresh".
 - **Ad-hoc signing means no notarization.** Fine locally. Moving this to another Mac would
   need real signing.
+
+## License
+
+MIT. See [LICENSE](LICENSE).
