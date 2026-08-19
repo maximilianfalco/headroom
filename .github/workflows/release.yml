@@ -3,10 +3,12 @@ name: Release
 on:
   workflow_dispatch:
     inputs:
-      version:
-        description: "Version to cut, without the v (e.g. 1.0.0)"
+      bump:
+        description: "Which part of the version to raise"
         required: true
-        type: string
+        type: choice
+        default: patch
+        options: [patch, minor, major]
       dry_run:
         description: "Build and verify, but publish nothing"
         type: boolean
@@ -44,6 +46,32 @@ jobs:
             fi
           done
           echo "Building $BUNDLE_ID, signed by $SIGNING_IDENTITY"
+
+      - name: Work out the next version
+        id: version
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          LATEST=$(gh release list --repo "$GITHUB_REPOSITORY" --limit 1 \
+                   --json tagName --jq '.[0].tagName // ""' | sed 's/^v//')
+          # No releases yet means the first major bump lands on 1.0.0.
+          [ -n "$LATEST" ] || LATEST=0.0.0
+          IFS=. read -r MAJOR MINOR PATCH <<< "$LATEST"
+
+          case "${{ inputs.bump }}" in
+            major) MAJOR=$((MAJOR + 1)); MINOR=0; PATCH=0 ;;
+            minor) MINOR=$((MINOR + 1)); PATCH=0 ;;
+            patch) PATCH=$((PATCH + 1)) ;;
+          esac
+          NEXT="$MAJOR.$MINOR.$PATCH"
+
+          if gh release view "v$NEXT" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "::error::v$NEXT already exists."
+            exit 1
+          fi
+
+          echo "version=$NEXT" >> "$GITHUB_OUTPUT"
+          echo "$LATEST -> $NEXT (${{ inputs.bump }})"
 
       - name: Install XcodeGen
         run: brew install xcodegen
@@ -105,7 +133,7 @@ jobs:
 
       - name: Set the version
         run: |
-          /usr/bin/sed -i '' "s/MARKETING_VERSION: \".*\"/MARKETING_VERSION: \"${{ inputs.version }}\"/" project.yml
+          /usr/bin/sed -i '' "s/MARKETING_VERSION: \".*\"/MARKETING_VERSION: \"${{ steps.version.outputs.version }}\"/" project.yml
           xcodegen generate
 
       - name: Build
@@ -126,8 +154,8 @@ jobs:
             || { echo "::error::Built app is not pinned to the expected certificate."; exit 1; }
 
           BUILT=$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" "$APP/Contents/Info.plist")
-          [ "$BUILT" = "${{ inputs.version }}" ] \
-            || { echo "::error::Built version $BUILT does not match ${{ inputs.version }}."; exit 1; }
+          [ "$BUILT" = "${{ steps.version.outputs.version }}" ] \
+            || { echo "::error::Built version $BUILT does not match ${{ steps.version.outputs.version }}."; exit 1; }
 
           # Intel users cannot run an arm64 only build.
           ARCHS=$(lipo -archs "$APP/Contents/MacOS/Headroom")
@@ -148,7 +176,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Headroom-${{ inputs.version }}
+          name: Headroom-${{ steps.version.outputs.version }}
           path: Headroom.zip
 
       - name: Publish release
@@ -156,9 +184,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "v${{ inputs.version }}" Headroom.zip \
+          gh release create "v${{ steps.version.outputs.version }}" Headroom.zip \
             --repo "$GITHUB_REPOSITORY" \
-            --title "Headroom v${{ inputs.version }}" \
+            --title "Headroom v${{ steps.version.outputs.version }}" \
             --target main --generate-notes
 
       - name: Update the Homebrew cask
@@ -172,16 +200,16 @@ jobs:
           gh api "repos/$TAP/contents/$CASK" --jq '.content' | base64 --decode > cask.rb
           SHA=$(gh api "repos/$TAP/contents/$CASK" --jq '.sha')
           /usr/bin/sed -i '' \
-            -e "s/version \".*\"/version \"${{ inputs.version }}\"/" \
+            -e "s/version \".*\"/version \"${{ steps.version.outputs.version }}\"/" \
             -e "s/sha256 \".*\"/sha256 \"${{ steps.package.outputs.sha256 }}\"/" cask.rb
           gh api -X PUT "repos/$TAP/contents/$CASK" \
-            -f message="cask: headroom ${{ inputs.version }}" \
+            -f message="cask: headroom ${{ steps.version.outputs.version }}" \
             -f content="$(base64 -i cask.rb)" -f sha="$SHA" --jq '.commit.html_url'
 
       - name: Summary
         run: |
           {
-            echo "### Headroom v${{ inputs.version }}"
+            echo "### Headroom v${{ steps.version.outputs.version }}"
             echo ""
             echo "- sha256 \`${{ steps.package.outputs.sha256 }}\`"
             echo "- dry run: ${{ inputs.dry_run }}"
