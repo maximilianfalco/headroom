@@ -23,14 +23,27 @@ jobs:
       contents: write
 
     env:
-      BUNDLE_ID_PREFIX: com.falco
-      SIGNING_IDENTITY: ClaudeUsage Local
+      # Repo variables, not secrets. Both are visible in any signed copy via codesign -dvvv.
+      # Kept out of the file so a fork does not inherit this project's identity.
+      BUNDLE_ID: ${{ vars.BUNDLE_ID }}
+      SIGNING_IDENTITY: ${{ vars.SIGNING_IDENTITY }}
       # The designated requirement pins to this leaf. If it changes, every existing user has to
       # re-approve their keychain and re-place their widgets, so the build stops instead.
-      EXPECTED_LEAF: 17FD2A6838A0E49ADD6D2F5870389108A2662C99
+      EXPECTED_LEAF: ${{ vars.EXPECTED_CERT_LEAF }}
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Check the build is configured
+        run: |
+          for name in BUNDLE_ID SIGNING_IDENTITY EXPECTED_LEAF; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Repository variable $name is not set."
+              echo "gh variable set $name --body '<value>'"
+              exit 1
+            fi
+          done
+          echo "Building $BUNDLE_ID, signed by $SIGNING_IDENTITY"
 
       - name: Install XcodeGen
         run: brew install xcodegen
