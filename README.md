@@ -94,7 +94,16 @@ there, with a live preview of the sprite so you can see what you are picking.
 
 ## Install
 
-Not packaged yet. For now, clone the repo and run `./build.sh`. Homebrew is the plan.
+```sh
+brew install --cask maximilianfalco/tap/headroom-bar
+```
+
+The cask is called `headroom-bar`. Plain `headroom` in Homebrew is a different app by
+someone else.
+
+Headroom is signed but not notarized, so the cask clears the Gatekeeper flag for you.
+
+Or clone the repo and run `./build.sh`.
 
 Adding your own sprite takes one file and two lines. See `Shared/Sprites/README.md`.
 
@@ -102,8 +111,8 @@ Adding your own sprite takes one file and two lines. See `Shared/Sprites/README.
 
 - **The widget does not really redraw every 60 seconds.** Headroom asks it to, but WidgetKit
   reloads on its own budget. The menu bar number is exact. The widget lags behind it.
-- **Apple Silicon only right now.** The build is arm64, so it will not run on an Intel Mac.
-- **Not notarized.** Fine on your own Mac. If someone else downloads it, Gatekeeper warns them.
+- **Not notarized.** Brew clears the Gatekeeper flag for you. If you grab the zip by hand
+  instead, macOS will warn you before it opens.
 
 ## Privacy
 
