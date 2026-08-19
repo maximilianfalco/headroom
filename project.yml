@@ -60,3 +60,34 @@ targets:
       properties:
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
+
+  HeadroomTests:
+    type: bundle.unit-test
+    platform: macOS
+    # Compiles Shared/ directly rather than hosting the app, so the suite needs no
+    # signing certificate and no running menu bar app.
+    sources:
+      - path: Shared
+        excludes:
+          - UsageViews.swift
+      - path: Tests
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: ${BUNDLE_ID_PREFIX}.HeadroomTests
+        GENERATE_INFOPLIST_FILE: YES
+
+schemes:
+  Headroom:
+    build:
+      targets:
+        Headroom: all
+  HeadroomTests:
+    build:
+      targets:
+        HeadroomTests: [test]
+    test:
+      gatherCoverageData: true
+      coverageTargets:
+        - HeadroomTests
+      targets:
+        - HeadroomTests

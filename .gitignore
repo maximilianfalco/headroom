@@ -6,6 +6,7 @@ HeadroomWidget/Info.plist
 # Build output
 build/
 DerivedData/
+TestResults.xcresult/
 
 # Local config
 .env

@@ -45,24 +45,25 @@ enum UsageFetcher {
 
     private static let tokenCache = TokenCache()
 
-    static func fetch(allowPrompt: Bool = false) async throws -> UsageSnapshot {
+    static func fetch(allowPrompt: Bool = false,
+                      session: URLSession = .shared) async throws -> UsageSnapshot {
         do {
-            return try await request(token: tokenCache.token(allowPrompt: allowPrompt))
+            return try await request(token: tokenCache.token(allowPrompt: allowPrompt), session: session)
         } catch UsageError.tokenExpired {
             // Claude Code rotated the token underneath us. Re-source once so the rotation is
             // invisible, and only surface the failure if the second attempt is rejected too.
             await tokenCache.invalidate()
-            return try await request(token: tokenCache.token(allowPrompt: allowPrompt))
+            return try await request(token: tokenCache.token(allowPrompt: allowPrompt), session: session)
         }
     }
 
-    private static func request(token: String) async throws -> UsageSnapshot {
+    static func request(token: String, session: URLSession) async throws -> UsageSnapshot {
         var request = URLRequest(url: Config.usageEndpoint)
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         request.setValue(Config.oauthBetaHeader, forHTTPHeaderField: "anthropic-beta")
         request.timeoutInterval = Config.requestTimeout
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await session.data(for: request)
         let code = (response as? HTTPURLResponse)?.statusCode ?? 0
         guard code != 401 else { throw UsageError.tokenExpired }
         guard code == 200 else { throw UsageError.http(code) }
@@ -86,8 +87,14 @@ enum UsageFetcher {
         guard status != errSecInteractionNotAllowed else { throw UsageError.needsReconnect }
         guard status == errSecSuccess,
               let data = item as? Data,
-              let creds = try? JSONDecoder().decode(Credentials.self, from: data)
+              let token = credential(from: data)
         else { throw UsageError.keychainUnavailable }
+        return token
+    }
+
+    /// Split from the keychain read so the credential blob can be parsed without one.
+    static func credential(from data: Data) -> StoredToken? {
+        guard let creds = try? JSONDecoder().decode(Credentials.self, from: data) else { return nil }
         return StoredToken(accessToken: creds.claudeAiOauth.accessToken,
                            expiresAt: creds.claudeAiOauth.expiresAt)
     }
@@ -147,7 +154,7 @@ enum UsageFetcher {
         return isoParser.date(from: raw) ?? ISO8601DateFormatter().date(from: raw)
     }
 
-    private static func decode(_ data: Data) throws -> [UsageBucket] {
+    static func decode(_ data: Data) throws -> [UsageBucket] {
         let decoder = JSONDecoder()
         decoder.keyDecodingStrategy = .convertFromSnakeCase
         let response = try decoder.decode(Response.self, from: data)
