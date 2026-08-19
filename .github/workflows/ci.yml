@@ -11,8 +11,8 @@ jobs:
     name: Tests
     runs-on: macos-15
     env:
-      # The suite never builds the app, so this only has to be a valid reverse-DNS prefix.
-      BUNDLE_ID_PREFIX: com.example
+      # The suite never builds the app, so this only has to be a valid reverse-DNS name.
+      BUNDLE_ID: app.example
 
     steps:
       - uses: actions/checkout@v4

@@ -9,7 +9,7 @@ if [ ! -f .env ]; then
 fi
 set -a; . ./.env; set +a
 
-: "${BUNDLE_ID_PREFIX:?BUNDLE_ID_PREFIX missing from .env}"
+: "${BUNDLE_ID:?BUNDLE_ID missing from .env}"
 : "${SIGNING_IDENTITY:?SIGNING_IDENTITY missing from .env}"
 
 APP_NAME=Headroom
