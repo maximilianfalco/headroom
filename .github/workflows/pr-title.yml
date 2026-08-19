@@ -1,0 +1,25 @@
+name: PR title
+
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
+
+jobs:
+  prefix:
+    name: Conventional prefix
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check title
+        env:
+          # Read through the environment, never interpolated into the script, so a title
+          # cannot inject shell.
+          TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          PATTERN='^(feat|fix|chore|refactor|perf)(\([a-zA-Z0-9._/-]+\))?!?:[[:space:]]+.+$'
+          if [[ ! "$TITLE" =~ $PATTERN ]]; then
+            echo "::error::PR title must start with feat, fix, chore, refactor, or perf."
+            echo "Got: $TITLE"
+            echo "For example: feat: add the thing"
+            exit 1
+          fi
+          echo "ok: $TITLE"
