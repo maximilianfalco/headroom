@@ -23,6 +23,8 @@ targets:
     platform: macOS
     sources:
       - path: Shared
+        excludes:
+          - "**/*.md"
       - path: Headroom
     dependencies:
       - target: HeadroomWidget
@@ -48,6 +50,7 @@ targets:
       # credential handling.
       - path: Shared
         excludes:
+          - "**/*.md"
           - KeychainQuery.swift
           - TokenStore.swift
           - UsageFetcher.swift
@@ -73,6 +76,12 @@ targets:
       - path: Shared
         excludes:
           - UsageViews.swift
+          # The whole sprite directory goes, so adding a sprite needs no change here.
+          - Sprites
+          - "**/*.md"
+      # ...except the two pure pieces of it, which are tested.
+      - path: Shared/Sprites/SpriteSettings.swift
+      - path: Shared/Sprites/SpriteNoise.swift
       - path: Tests
     settings:
       base:

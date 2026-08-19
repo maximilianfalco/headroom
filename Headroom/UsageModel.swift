@@ -11,6 +11,22 @@ final class UsageModel: ObservableObject {
     @Published var notificationsEnabled = UsageNotifier.isEnabled {
         didSet { UsageNotifier.isEnabled = notificationsEnabled }
     }
+    @Published var spriteKind = UsageModel.stored(SpriteKind.self, "spriteKind") ?? .plant {
+        didSet { UserDefaults.standard.set(spriteKind.rawValue, forKey: "spriteKind") }
+    }
+    @Published var spriteMotion = UsageModel.stored(SpriteMotion.self, "spriteMotion") ?? .follow {
+        didSet { UserDefaults.standard.set(spriteMotion.rawValue, forKey: "spriteMotion") }
+    }
+
+    private static func stored<T: RawRepresentable>(_ type: T.Type, _ key: String) -> T?
+        where T.RawValue == String {
+        UserDefaults.standard.string(forKey: key).flatMap(T.init(rawValue:))
+    }
+
+    /// What the sprite draws: whichever limit is closest to its cap.
+    var worstFill: Double {
+        Double(snapshot?.worst?.percent ?? 0) / 100
+    }
 
     private var poller: Task<Void, Never>?
 

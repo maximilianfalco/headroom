@@ -32,6 +32,24 @@ pick Edit Widgets, or open Notification Center, then search for "Headroom".
 
 You can also pick which limit a widget follows, or leave it on whichever is highest.
 
+## The sprite
+
+Down the right of the menu bar panel is a bit of pixel art that grows with whichever limit is
+closest to its cap, and turns green, orange, then red along with the bars. It is there so you
+can tell how you are doing without reading a number.
+
+Pick one in Settings:
+
+| | |
+| --- | --- |
+| **Plant** | A fern. A seedling means plenty of room, a full fern means you are nearly out. |
+| **Water** | Water rising up the column, with waves. Full means you are out of room. |
+| **Cave** | Rock closing in from the top and bottom. The gap left is your headroom. |
+
+There is also a **Level** setting. **Usage** follows your real numbers. **Demo** ignores them
+and sweeps the whole range on a loop, which is the only way to see much when you are sitting at
+5%. The Cave in particular is nearly empty below about 40%.
+
 ## Notifications
 
 You get one alert each time a limit passes 80%, 95%, and 100%, with a sound at 95% and up. They
@@ -43,9 +61,16 @@ Headroom reads your Claude Code login out of the keychain, so macOS asks you onc
 allow it. Click Always Allow. After that it stays quiet: the 60 second poll asks in a way that
 cannot open a popup, and only the refresh arrow and the Reconnect button can ever ask again.
 
+## Settings
+
+The gear in the panel opens Settings, or press Cmd+comma. Sprite choice and notifications live
+there, with a live preview of the sprite so you can see what you are picking.
+
 ## Install
 
 Not packaged yet. For now, clone the repo and run `./build.sh`. Homebrew is the plan.
+
+Adding your own sprite takes one file and two lines. See `Shared/Sprites/README.md`.
 
 ## Known limits
 
