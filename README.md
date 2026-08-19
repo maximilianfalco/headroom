@@ -13,19 +13,20 @@
 
 </div>
 
-Menu bar app plus a macOS widget showing current usage against your Claude plan limits.
+A menu bar app and a desktop widget. They show how much of your Claude plan you have used,
+how many tokens you have spent, and what that work would cost on the API.
 
-The app (unsandboxed) reads the Claude Code OAuth token from the keychain, polls the usage
-endpoint every 60 seconds, writes a snapshot, and pushes a widget reload. The widget
-(sandboxed) only reads that snapshot, and does not compile any credential handling.
+The app reads your Claude Code login from the keychain. Every 60 seconds it asks Anthropic
+how much of your plan is left, writes the answer to a small file, and tells the widget to
+redraw. The widget only reads that file. It holds none of the login code.
 
-The token is copied into Headroom's own keychain item and re-read from there until it
-expires. Claude Code rewrites the access list on its item every time it refreshes its
-token, so every read of *that* item is another chance to be prompted for access, while an
-item Headroom created trusts only Headroom. The poll loop can never raise a dialog: it
-asks for the token with interaction disabled, and if the copy has expired and Claude Code's
-item will not open silently, the panel shows a Reconnect button instead. Pressing it, or
-the refresh arrow, is the only thing that can prompt.
+Headroom copies the login token into its own keychain item and reads it from there. Here is
+why. Claude Code rewrites the list of who may read its keychain item every time it refreshes
+the token. So every read of *that* item is a fresh chance to get a popup. An item Headroom
+made trusts only Headroom, so reading it never pops. The 60 second poll also asks in a way
+that cannot open a popup at all. If the copy runs out and Claude Code's item will not open
+quietly, the panel shows a Reconnect button. That button and the refresh arrow are the only
+things that can ever ask you for access.
 
 ## Build
 
@@ -34,46 +35,45 @@ cp .env.example .env    # then edit it
 ./build.sh
 ```
 
-Builds, installs to `/Applications`, and relaunches. No Apple Developer account or
-provisioning profile is needed. `build.sh` pins `DEVELOPER_DIR` to the real Xcode, since
-`xcode-select` often points at CommandLineTools, which cannot build app extensions.
+That builds the app, puts it in `/Applications`, and restarts it. You do not need an Apple
+Developer account. `build.sh` points `DEVELOPER_DIR` at the real Xcode, because
+`xcode-select` often points at CommandLineTools, and that cannot build widgets.
 
-Run `xcodegen generate` after adding or renaming files (build.sh already does).
+Run `xcodegen generate` after you add or rename a file. `build.sh` already does.
 
 ## Configuration
 
-There are no secrets in this repo. The OAuth token is read from the keychain at runtime,
-cached in a second keychain item (`<bundle id>.token`), and is never written to disk,
-logged, or committed. `.env` holds only per-machine build settings, and is gitignored so
-your bundle prefix and certificate name stay local:
+No secrets live in this repo. The token is read from the keychain while the app runs, kept
+in a second keychain item (`<bundle id>.token`), and never written to disk, a log, or a
+commit. `.env` holds build settings for your own Mac, and git ignores it, so your bundle
+prefix and certificate name stay yours:
 
-| Variable | Purpose |
+| Variable | What it is for |
 | --- | --- |
-| `BUNDLE_ID_PREFIX` | Reverse-DNS prefix for both bundle identifiers |
-| `SIGNING_IDENTITY` | Name of the code signing certificate in your login keychain |
+| `BUNDLE_ID_PREFIX` | The reverse-DNS start of both bundle ids |
+| `SIGNING_IDENTITY` | The name of your code signing certificate in the login keychain |
 
-Runtime behaviour lives in `Shared/Config.swift`: poll interval, notification thresholds,
-the severity cutoffs used for colour, the reset notice floor, and the keychain service name.
-Bundle identifiers are deliberately not in there, since they come from the build and are
-derived at runtime by `UsageStore`.
+`Shared/Config.swift` holds the knobs: how often to poll, when to warn you, the colour
+cutoffs, and the keychain name. Bundle ids are not in there on purpose. They come from the
+build, and `UsageStore` works them out while the app runs.
 
 ## Signing identity
 
-Builds are signed with a self-signed local certificate. The name is arbitrary and only
-has to match `SIGNING_IDENTITY` in your `.env`. This
-matters more than it sounds: ad-hoc signing derives the app's identity from the binary
-hash, so every rebuild produces a different identity. That invalidates the keychain ACL
-entry behind "Always Allow" and orphans placed widgets, because chronod caches extensions
-by code identity. A fixed certificate pins the designated requirement to the cert instead, which is what lets
-both the "Always Allow" grant on Claude Code's item and Headroom's own token item survive a
-rebuild:
+Builds are signed with a certificate you make yourself. The name can be anything. It only
+has to match `SIGNING_IDENTITY` in your `.env`.
+
+This matters more than it sounds. Ad-hoc signing builds the app's identity out of the binary
+hash, so every rebuild looks like a brand new app to macOS. That throws away the keychain's
+"Always Allow" and orphans any widget you placed, because chronod remembers widgets by
+identity. A fixed certificate ties the identity to the certificate instead. That is what
+lets both keychain grants live through a rebuild:
 
 ```
 designated => identifier "<prefix>.Headroom" and certificate leaf = H"<cert-sha1>"
 ```
 
-To recreate it on another machine (or after it expires in 2036), either use Keychain Access
-> Certificate Assistant > Create a Certificate (type: Code Signing, self-signed), or:
+To make one on another Mac, or after this one runs out in 2036, use Keychain Access >
+Certificate Assistant > Create a Certificate (type: Code Signing, self-signed). Or run:
 
 ```sh
 openssl req -x509 -newkey rsa:2048 -keyout key.pem -out cert.pem -days 3650 -nodes \
@@ -82,7 +82,7 @@ openssl req -x509 -newkey rsa:2048 -keyout key.pem -out cert.pem -days 3650 -nod
   -addext "keyUsage=critical,digitalSignature" \
   -addext "extendedKeyUsage=critical,codeSigning"
 
-# Apple's importer rejects OpenSSL 3 defaults, so force the legacy algorithms.
+# Apple's importer says no to OpenSSL 3 defaults. Force the old ones.
 openssl pkcs12 -export -out cert.p12 -inkey key.pem -in cert.pem \
   -keypbe PBE-SHA1-3DES -certpbe PBE-SHA1-3DES -macalg sha1 -passout pass:tmp123
 
@@ -91,65 +91,69 @@ security import cert.p12 -k ~/Library/Keychains/login.keychain-db -P tmp123 \
 security add-trusted-cert -r trustRoot -p codeSign \
   -k ~/Library/Keychains/login.keychain-db cert.pem
 
-rm -f key.pem cert.p12   # the private key now lives in the keychain
+rm -f key.pem cert.p12   # the private key lives in the keychain now
 ```
 
-Confirm with `security find-identity -v -p codesigning`.
+Check it worked with `security find-identity -v -p codesigning`.
 
 ## Adding the widget
 
-Right click the desktop > Edit Widgets, or open Notification Center, then search for
-"Headroom". Small shows the single worst limit as a ring; medium lists every limit as
-bars.
+Right click the desktop and pick Edit Widgets, or open Notification Center. Then search for
+"Headroom". Small shows your worst limit as a ring. Medium lists every limit as bars. Large
+leads with a ring and lists the rest below it.
 
 ## Data source
 
-`GET https://api.anthropic.com/api/oauth/usage`, with the OAuth access token from the
-keychain item `Claude Code-credentials` and header `anthropic-beta: oauth-2025-04-20`.
+`GET https://api.anthropic.com/api/oauth/usage`, using the token from the keychain item
+`Claude Code-credentials` and the header `anthropic-beta: oauth-2025-04-20`.
 
-This endpoint is undocumented and is what `/usage` inside Claude Code calls. It can change
-without notice. `fetch-usage.sh` is a standalone shell implementation of the same call,
-useful for verifying auth outside the app.
+Anthropic has not documented this endpoint. It is what `/usage` inside Claude Code calls, and
+it can change any day. `fetch-usage.sh` makes the same call from a shell, which helps when
+you want to test the login on its own.
 
-Response shape that matters:
+The parts that matter:
 
 - `five_hour.utilization` and `seven_day.utilization` are percentages
-- `limits[]` carries per-model caps as `kind: "weekly_scoped"` with `scope.model.display_name`
-- `resets_at` is ISO 8601 UTC
+- `limits[]` holds the per-model caps as `kind: "weekly_scoped"`, named in `scope.model.display_name`
+- `resets_at` is ISO 8601, in UTC
+
+Token counts and cost do not come from here. They come from Claude Code's own log files. See
+[Privacy](#privacy).
 
 ## Notifications
 
-Fires once per threshold crossing (80%, 95%, 100%) per limit, with sound at 95% and above.
-Crossings are tracked in `UserDefaults` and rearm automatically when a limit resets. Toggle
-them off from the menu bar panel.
+You get one alert each time a limit passes 80%, 95%, and 100%. It plays a sound at 95% and
+up. Crossings are stored in `UserDefaults` and arm themselves again when the limit resets.
+Turn them off from the menu bar panel.
 
 ## Snapshot location
 
-App Groups is the idiomatic way to share data between an app and its widget, but it
-requires a paid Apple Developer account to provision. Without one, `UsageStore` falls back
-to the widget extension's own container, which the unsandboxed app can still write to:
+App Groups is the normal way for an app and its widget to share a file, but you need a paid
+Apple Developer account to set one up. Without one, `UsageStore` falls back to the widget's
+own folder. The app is not sandboxed, so it can still write there:
 
 ```
 ~/Library/Containers/<prefix>.Headroom.Widget/Data/Library/Application Support/Headroom/usage.json
 ```
 
-To switch to App Groups later: add the `com.apple.security.application-groups` entitlement
-to both targets, re-add `AppGroupIdentifier` to both Info.plists in `project.yml` as
-`$(TeamIdentifierPrefix)group.<prefix>.Headroom`, and set your team. `UsageStore`
-prefers the group container automatically when the key is present.
+To move to App Groups later: add the `com.apple.security.application-groups` entitlement to
+both targets, put `AppGroupIdentifier` back in both Info.plists in `project.yml` as
+`$(TeamIdentifierPrefix)group.<prefix>.Headroom`, and set your team. `UsageStore` picks the
+group folder on its own once that key is there.
 
-## Known constraints
+## Known limits
 
-- **Widget refresh is not really every 60 seconds.** The app polls at 60s and calls
-  `WidgetCenter.reloadAllTimelines()`, but WidgetKit refreshes on a system budget. The menu
-  bar number is exact; the widget lags behind it. The timeline policy is a 15 minute
-  safety net for when the app is not running.
-- **No OAuth refresh flow.** Claude Code refreshes its own credential. When Headroom's cached
-  copy expires it re-reads Claude Code's keychain item silently, and only if that read would
-  need a prompt does the panel fall back to a Reconnect button.
-- **No test suite.** Nothing is covered by automated tests yet.
-- **Ad-hoc signing means no notarization.** Fine locally. Moving this to another Mac would
-  need real signing.
+- **The widget does not really redraw every 60 seconds.** The app polls every 60s and asks
+  WidgetKit to reload, but WidgetKit reloads on its own budget. The menu bar number is
+  exact. The widget lags behind it. The 15 minute timeline is a backstop for when the app is
+  not running.
+- **Headroom does not refresh the login itself.** Claude Code does that. When Headroom's copy
+  runs out, it reads Claude Code's keychain item again, quietly. Only if that read would open
+  a popup does the panel show a Reconnect button.
+- **No tests yet.** Nothing here is covered by automated tests.
+- **Not notarized.** Fine on your own Mac. If someone else downloads it, Gatekeeper warns
+  them until it ships another way.
+- **Apple Silicon only right now.** The build is arm64, so it will not run on an Intel Mac.
 
 ## Privacy
 
