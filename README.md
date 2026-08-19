@@ -120,6 +120,23 @@ The parts that matter:
 Token counts and cost do not come from here. They come from Claude Code's own log files. See
 [Privacy](#privacy).
 
+## Tests
+
+```sh
+xcodegen generate
+xcodebuild test -project Headroom.xcodeproj -scheme HeadroomTests \
+  -destination 'platform=macOS' -enableCodeCoverage YES CODE_SIGNING_ALLOWED=NO
+./scripts/coverage.sh
+```
+
+The suite compiles `Shared/` on its own, so it needs no certificate and no running app. It
+covers the pricing table, the log parsing and dedup, the window maths, the response decoding,
+the snapshot file, and the HTTP status paths through a stubbed session.
+
+What it does not cover, and cannot without a real keychain: reading Claude Code's credential
+item, and the token cache built on top of it. GitHub Actions runs the same commands on every
+push.
+
 ## Notifications
 
 You get one alert each time a limit passes 80%, 95%, and 100%. It plays a sound at 95% and
@@ -150,7 +167,6 @@ group folder on its own once that key is there.
 - **Headroom does not refresh the login itself.** Claude Code does that. When Headroom's copy
   runs out, it reads Claude Code's keychain item again, quietly. Only if that read would open
   a popup does the panel show a Reconnect button.
-- **No tests yet.** Nothing here is covered by automated tests.
 - **Not notarized.** Fine on your own Mac. If someone else downloads it, Gatekeeper warns
   them until it ships another way.
 - **Apple Silicon only right now.** The build is arm64, so it will not run on an Intel Mac.

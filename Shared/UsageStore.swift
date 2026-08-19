@@ -18,21 +18,25 @@ enum UsageStore {
         return fallbackDirectory
     }
 
-    /// Derived so the bundle prefix stays configurable at build time.
-    private static var widgetBundleID: String {
-        let id = Bundle.main.bundleIdentifier ?? ""
+    /// Derived so the bundle prefix stays configurable at build time. The widget asks for its
+    /// own id and gets it back unchanged; the app asks and gets the widget's.
+    static func widgetBundleID(from bundleID: String?) -> String {
+        let id = bundleID ?? ""
         return id.hasSuffix(".Widget") ? id : id + ".Widget"
     }
 
-    private static var fallbackDirectory: URL {
-        let widgetContainer = "Library/Containers/\(widgetBundleID)/Data"
-        let home = URL(fileURLWithPath: NSHomeDirectory())
-        // Inside the sandboxed widget NSHomeDirectory() is already the container.
-        let base = home.path.contains(widgetContainer) ? home : home.appending(path: widgetContainer)
+    /// Inside the sandboxed widget `home` is already the container, so the path must not be
+    /// appended twice.
+    static func fallbackDirectory(home: URL, widgetBundleID: String) -> URL {
+        let container = "Library/Containers/\(widgetBundleID)/Data"
+        let base = home.path.contains(container) ? home : home.appending(path: container)
         return base.appending(path: "Library/Application Support/Headroom")
     }
 
-    private static var fileURL: URL { directory.appending(path: fileName) }
+    private static var fallbackDirectory: URL {
+        fallbackDirectory(home: URL(fileURLWithPath: NSHomeDirectory()),
+                          widgetBundleID: widgetBundleID(from: Bundle.main.bundleIdentifier))
+    }
 
     private static let encoder: JSONEncoder = {
         let e = JSONEncoder()
@@ -47,15 +51,18 @@ enum UsageStore {
         return d
     }()
 
-    static func load() -> UsageSnapshot? {
-        guard let data = try? Data(contentsOf: fileURL) else { return nil }
+    static func load(from override: URL? = nil) -> UsageSnapshot? {
+        let url = (override ?? directory).appending(path: fileName)
+        guard let data = try? Data(contentsOf: url) else { return nil }
         return try? decoder.decode(UsageSnapshot.self, from: data)
     }
 
-    static func save(_ snapshot: UsageSnapshot) throws {
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        let tmp = directory.appending(path: ".\(fileName).tmp")
+    /// Writes through a temporary file so a reader never sees a half written snapshot.
+    static func save(_ snapshot: UsageSnapshot, to override: URL? = nil) throws {
+        let dir = override ?? directory
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let tmp = dir.appending(path: ".\(fileName).tmp")
         try encoder.encode(snapshot).write(to: tmp)
-        _ = try FileManager.default.replaceItemAt(fileURL, withItemAt: tmp)
+        _ = try FileManager.default.replaceItemAt(dir.appending(path: fileName), withItemAt: tmp)
     }
 }

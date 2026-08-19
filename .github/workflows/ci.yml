@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Tests
+    runs-on: macos-15
+    env:
+      # The suite never builds the app, so this only has to be a valid reverse-DNS prefix.
+      BUNDLE_ID_PREFIX: com.example
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate project
+        run: xcodegen generate
+
+      - name: Run tests
+        run: |
+          xcodebuild test \
+            -project Headroom.xcodeproj \
+            -scheme HeadroomTests \
+            -destination 'platform=macOS' \
+            -enableCodeCoverage YES \
+            -resultBundlePath TestResults.xcresult \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Coverage
+        run: ./scripts/coverage.sh TestResults.xcresult
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: TestResults.xcresult

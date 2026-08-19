@@ -33,15 +33,19 @@ actor LocalUsageReader {
 
     private var cache: [String: Parsed] = [:]
 
+    static var defaultProjectsRoot: URL {
+        FileManager.default.homeDirectoryForCurrentUser.appending(path: Config.claudeProjectsPath)
+    }
+
     /// `sessionEndsAt` is the five hour bucket's reset, which pins the window to the real
     /// session rather than to a rolling guess. A missing or already elapsed reset falls back
     /// to the last five hours.
-    func usage(sessionEndsAt: Date?, now: Date) -> LocalUsage? {
+    func usage(sessionEndsAt: Date?, now: Date, projectsRoot: URL? = nil) -> LocalUsage? {
         let dayStart = Calendar.current.startOfDay(for: now)
         let sessionStart = sessionEndsAt.flatMap { $0 > now ? $0 - Config.sessionWindow : nil }
             ?? now - Config.sessionWindow
 
-        let files = logFiles(modifiedSince: dayStart)
+        let files = logFiles(in: projectsRoot ?? Self.defaultProjectsRoot, modifiedSince: dayStart)
         guard !files.isEmpty else { return nil }
 
         var seen = Set<String>()
@@ -72,9 +76,7 @@ actor LocalUsageReader {
                           newPerMinute: Double(sessionNew) / elapsed)
     }
 
-    private func logFiles(modifiedSince: Date) -> [LogFile] {
-        let root = FileManager.default.homeDirectoryForCurrentUser
-            .appending(path: Config.claudeProjectsPath)
+    private func logFiles(in root: URL, modifiedSince: Date) -> [LogFile] {
         let keys: [URLResourceKey] = [.contentModificationDateKey, .fileSizeKey, .isRegularFileKey]
         guard let walker = FileManager.default.enumerator(
             at: root, includingPropertiesForKeys: keys, options: [.skipsHiddenFiles])
