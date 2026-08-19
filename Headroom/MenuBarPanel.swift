@@ -4,11 +4,30 @@ struct MenuBarPanel: View {
     @ObservedObject var model: UsageModel
 
     var body: some View {
+        HStack(alignment: .top, spacing: 22) {
+            panel
+            sprite
+                .frame(width: 126)
+                .frame(maxHeight: .infinity)
+        }
+        .padding(14)
+        .frame(width: 414)
+    }
+
+    private var sprite: some View {
+        SpriteView(kind: model.spriteKind, fill: model.worstFill, motion: model.spriteMotion)
+    }
+
+    private var panel: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Text("Headroom")
                     .font(.system(size: 13, weight: .semibold))
                 Spacer()
+                SettingsLink {
+                    Image(systemName: "gearshape")
+                }
+                .buttonStyle(.plain)
                 Button {
                     Task { await model.refresh(allowPrompt: true) }
                 } label: {
@@ -59,8 +78,6 @@ struct MenuBarPanel: View {
                     .foregroundStyle(.secondary)
             }
         }
-        .padding(14)
-        .frame(width: 260)
     }
 
     @ViewBuilder

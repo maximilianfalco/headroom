@@ -11,6 +11,10 @@ struct HeadroomApp: App {
             MenuBarLabel(snapshot: model.snapshot)
         }
         .menuBarExtraStyle(.window)
+
+        Settings {
+            SettingsPanel(model: model)
+        }
     }
 }
 
