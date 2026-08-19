@@ -11,6 +11,8 @@
 ![WidgetKit](https://img.shields.io/badge/WidgetKit-small%20%C2%B7%20medium%20%C2%B7%20large-purple)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
+<img src="assets/menu-bar-panel.png" width="470" alt="The Headroom panel in the menu bar">
+
 </div>
 
 A menu bar app and a desktop widget. They show how much of your Claude plan you have used, how
@@ -30,7 +32,31 @@ this session and for today, plus how fast you are spending them.
 limit as bars. Large leads with a ring and lists the rest below it. Right click the desktop and
 pick Edit Widgets, or open Notification Center, then search for "Headroom".
 
+<img src="assets/desktop-widget.png" width="420" alt="The medium widget on the desktop">
+
 You can also pick which limit a widget follows, or leave it on whichever is highest.
+
+## What counts
+
+The two halves of the panel are not measuring the same thing, which is worth knowing before you
+read too much into either.
+
+**The bars are your whole plan.** They come from Anthropic and cover everything on your account
+that counts toward the five hour and weekly windows. Work you do on claude.ai or in Claude
+Desktop moves them too, not just Claude Code.
+
+**The tokens and cost are Claude Code only.** They are read from `~/.claude/projects/`, which is
+where the Claude Code CLI writes its session logs. Nothing else is counted.
+
+So the bars answer "how much of my plan is gone" and the numbers answer "how much of that was
+the CLI".
+
+One gap that follows from this: **Claude Code run inside Claude Desktop is not counted.** Those
+sessions log somewhere else, under `~/Library/Application Support/Claude/`. They still move the
+bars, because Anthropic counts them, but they will not show up in your token or cost figures. If
+you work mostly in Desktop, your real numbers are higher than what you see here.
+
+Headroom does not read Codex, Gemini, Cursor, or any other tool. Claude only.
 
 ## The sprite
 
