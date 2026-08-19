@@ -71,6 +71,10 @@ jobs:
           security create-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
           security default-keychain -s build.keychain
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+          # Being the default is not enough. `security find-identity` and codesign both read
+          # the search list, so the new keychain has to be added to it explicitly.
+          ORIGINAL=$(security list-keychains -d user | sed -e 's/^[[:space:]]*//' -e 's/"//g')
+          security list-keychains -d user -s build.keychain $ORIGINAL
           security set-keychain-settings -t 3600 -l build.keychain
           security import /tmp/cert.p12 -k build.keychain -P "$CERT_PASSWORD" \
             -T /usr/bin/codesign -T /usr/bin/security
@@ -80,7 +84,11 @@ jobs:
 
       - name: Check the signing identity is the pinned one
         run: |
-          LEAF=$(security find-identity -v -p codesigning \
+          # No -v. A self signed certificate is not trusted on a fresh runner, so it would be
+          # filtered out as invalid even though codesign can sign with it perfectly well.
+          echo "Identities visible to codesign:"
+          security find-identity -p codesigning
+          LEAF=$(security find-identity -p codesigning \
                  | awk -v id="\"$SIGNING_IDENTITY\"" '$0 ~ id {print $2; exit}')
           if [ -z "$LEAF" ]; then
             echo "::error::Signing identity '$SIGNING_IDENTITY' not in the keychain."
