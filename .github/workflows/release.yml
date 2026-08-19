@@ -150,8 +150,16 @@ jobs:
         run: |
           APP=build/Build/Products/Release/Headroom.app
           codesign --verify --deep --strict --verbose=2 "$APP"
-          codesign -d --requirements - "$APP" 2>&1 | grep -q "$EXPECTED_LEAF" \
-            || { echo "::error::Built app is not pinned to the expected certificate."; exit 1; }
+
+          # find-identity prints the leaf uppercase, codesign prints it lowercase, so this
+          # comparison has to ignore case or it never matches a correctly signed app.
+          REQUIREMENT=$(codesign -d --requirements - "$APP" 2>&1)
+          if ! grep -qi "$EXPECTED_LEAF" <<< "$REQUIREMENT"; then
+            echo "::error::Built app is not pinned to the expected certificate."
+            echo "Expected leaf: $EXPECTED_LEAF"
+            echo "Actual requirement: $REQUIREMENT"
+            exit 1
+          fi
 
           BUILT=$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" "$APP/Contents/Info.plist")
           [ "$BUILT" = "${{ steps.version.outputs.version }}" ] \
