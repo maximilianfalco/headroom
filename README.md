@@ -71,6 +71,7 @@ Pick one in Settings:
 | **Plant** | A fern. A seedling means plenty of room, a full fern means you are nearly out. |
 | **Water** | Water rising up the column, with waves. Full means you are out of room. |
 | **Cave** | Rock closing in from the top and bottom. The gap left is your headroom. |
+| **Hourglass** | Sand draining. What is left up top is your room, the heap below is what you spent. |
 
 There is also a **Level** setting. **Usage** follows your real numbers. **Demo** ignores them
 and sweeps the whole range on a loop, which is the only way to see much when you are sitting at

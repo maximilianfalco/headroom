@@ -65,7 +65,8 @@ the sprite sources into a throwaway binary that writes a PNG. No Xcode project, 
 ```sh
 export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
 $(xcrun --find swiftc) -sdk "$(xcrun --show-sdk-path)" -parse-as-library \
-  Shared/UsageSnapshot.swift Shared/UsageViews.swift Shared/Sprites/*.swift preview.swift \
+  Shared/Config.swift Shared/UsageSnapshot.swift Shared/UsageViews.swift \
+  Shared/Sprites/*.swift preview.swift \
   -o preview && ./preview
 ```
 
