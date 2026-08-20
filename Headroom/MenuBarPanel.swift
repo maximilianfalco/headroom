@@ -29,7 +29,9 @@ struct MenuBarPanel: View {
                 }
                 .buttonStyle(.plain)
                 Button {
-                    Task { await model.refresh(allowPrompt: true) }
+                    // Refreshing the numbers must not double as re-authorising, or a habitual
+                    // click lands a keychain prompt. Only Reconnect asks.
+                    Task { await model.refresh() }
                 } label: {
                     Image(systemName: "arrow.clockwise")
                         .opacity(model.isRefreshing ? 0.4 : 1)
