@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct MenuBarPanel: View {
+    @Environment(\.openSettings) private var openSettings
     @ObservedObject var model: UsageModel
 
     var body: some View {
@@ -24,7 +25,12 @@ struct MenuBarPanel: View {
                 Text("Headroom")
                     .font(.system(size: 13, weight: .semibold))
                 Spacer()
-                SettingsLink {
+                Button {
+                    // A menu bar app is never the active app, so Settings opens behind
+                    // whatever is in front unless we activate first.
+                    NSApp.activate()
+                    openSettings()
+                } label: {
                     Image(systemName: "gearshape")
                 }
                 .buttonStyle(.plain)
