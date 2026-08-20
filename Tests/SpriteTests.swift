@@ -95,3 +95,25 @@ struct SpriteNoiseTests {
         #expect(SpriteNoise.clamp(input) == expected)
     }
 }
+
+struct SpriteKindTests {
+    @Test("every sprite is offered, named and identified by itself")
+    func everyKindIsUsable() {
+        #expect(SpriteKind.allCases.count == 4)
+        for kind in SpriteKind.allCases {
+            #expect(!kind.label.isEmpty)
+            #expect(kind.id == kind.rawValue)
+        }
+    }
+
+    @Test("labels are distinct, so the picker cannot show the same name twice")
+    func labelsAreDistinct() {
+        let labels = SpriteKind.allCases.map(\.label)
+        #expect(Set(labels).count == labels.count)
+    }
+
+    @Test(arguments: zip(SpriteKind.allCases, ["Plant", "Cave", "Water", "Hourglass"]))
+    func labelReads(kind: SpriteKind, expected: String) {
+        #expect(kind.label == expected)
+    }
+}
