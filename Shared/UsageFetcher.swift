@@ -83,7 +83,6 @@ enum UsageFetcher {
         return token
     }
 
-
     fileprivate static func readClaudeToken(allowPrompt: Bool) throws -> StoredToken {
         var query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
