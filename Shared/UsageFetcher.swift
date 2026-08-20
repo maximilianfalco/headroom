@@ -31,7 +31,7 @@ enum UsageFetcher {
                 cached = stored
                 return stored.accessToken
             }
-            let fresh = try UsageFetcher.readClaudeToken(allowPrompt: allowPrompt)
+            let fresh = try UsageFetcher.requireUsable(UsageFetcher.readClaudeToken(allowPrompt: allowPrompt))
             cached = fresh
             TokenStore.save(fresh)
             return fresh.accessToken
@@ -47,8 +47,11 @@ enum UsageFetcher {
 
     static func fetch(allowPrompt: Bool = false,
                       session: URLSession = .shared) async throws -> UsageSnapshot {
+        // Sourced outside the retry, so a token that is already dead fails once rather than
+        // reading Claude Code's keychain item a second time and prompting again.
+        let token = try await tokenCache.token(allowPrompt: allowPrompt)
         do {
-            return try await request(token: tokenCache.token(allowPrompt: allowPrompt), session: session)
+            return try await request(token: token, session: session)
         } catch UsageError.tokenExpired {
             // Claude Code rotated the token underneath us. Re-source once so the rotation is
             // invisible, and only surface the failure if the second attempt is rejected too.
@@ -72,6 +75,13 @@ enum UsageFetcher {
     }
 
     // MARK: - Keychain
+
+    /// Rejects a token that is already past its margin. Claude Code has not rotated yet, so
+    /// keeping it would spend a request, then a second keychain read, to learn it is dead.
+    static func requireUsable(_ token: StoredToken) throws -> StoredToken {
+        guard token.isUsable else { throw UsageError.tokenExpired }
+        return token
+    }
 
     fileprivate static func readClaudeToken(allowPrompt: Bool) throws -> StoredToken {
         var query: [String: Any] = [
