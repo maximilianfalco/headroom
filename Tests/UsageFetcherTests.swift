@@ -163,3 +163,23 @@ struct KeychainQueryTests {
         #expect(query[kSecAttrService as String] as? String == "svc")
     }
 }
+
+struct TokenUsabilityTests {
+    @Test("a token with life left is handed back unchanged")
+    func usableTokenPassesThrough() throws {
+        let token = StoredToken(accessToken: "abc", expiresAt: Date().addingTimeInterval(3_600))
+        #expect(try UsageFetcher.requireUsable(token).accessToken == "abc")
+    }
+
+    @Test("a token with no recorded expiry is handed back unchanged")
+    func tokenWithoutExpiryPassesThrough() throws {
+        let token = StoredToken(accessToken: "abc", expiresAt: nil)
+        #expect(try UsageFetcher.requireUsable(token).accessToken == "abc")
+    }
+
+    @Test(arguments: [Config.tokenExpiryMargin - 10, 0, -3_600])
+    func tokenInsideTheMarginIsRejected(offset: TimeInterval) {
+        let token = StoredToken(accessToken: "abc", expiresAt: Date().addingTimeInterval(offset))
+        #expect(throws: UsageError.tokenExpired) { try UsageFetcher.requireUsable(token) }
+    }
+}
