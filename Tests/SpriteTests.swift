@@ -99,7 +99,7 @@ struct SpriteNoiseTests {
 struct SpriteKindTests {
     @Test("every sprite is offered, named and identified by itself")
     func everyKindIsUsable() {
-        #expect(SpriteKind.allCases.count == 4)
+        #expect(SpriteKind.allCases.count == 5)
         for kind in SpriteKind.allCases {
             #expect(!kind.label.isEmpty)
             #expect(kind.id == kind.rawValue)
@@ -112,7 +112,7 @@ struct SpriteKindTests {
         #expect(Set(labels).count == labels.count)
     }
 
-    @Test(arguments: zip(SpriteKind.allCases, ["Plant", "Cave", "Water", "Hourglass"]))
+    @Test(arguments: zip(SpriteKind.allCases, ["Plant", "Cave", "Water", "Hourglass", "Blocks"]))
     func labelReads(kind: SpriteKind, expected: String) {
         #expect(kind.label == expected)
     }

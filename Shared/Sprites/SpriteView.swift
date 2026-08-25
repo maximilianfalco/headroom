@@ -14,6 +14,7 @@ struct SpriteView: View {
         case .cave: CaveSprite(cell: cell, fill: fill, motion: motion)
         case .water: WaterSprite(cell: cell, fill: fill, motion: motion)
         case .hourglass: HourglassSprite(cell: cell, fill: fill, motion: motion)
+        case .blocks: BlocksSprite(cell: cell, fill: fill, motion: motion)
         }
     }
 }
