@@ -1,7 +1,7 @@
 import Foundation
 
 enum SpriteKind: String, CaseIterable, Identifiable {
-    case plant, cave, water
+    case plant, cave, water, blocks
 
     var id: String { rawValue }
 
@@ -10,6 +10,7 @@ enum SpriteKind: String, CaseIterable, Identifiable {
         case .plant: return "Plant"
         case .cave: return "Cave"
         case .water: return "Water"
+        case .blocks: return "Blocks"
         }
     }
 }
