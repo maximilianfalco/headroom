@@ -34,6 +34,9 @@ struct SpriteFrame {
 struct SpriteCanvas: View {
     var cell: CGFloat = 9
     var fill: Double = 0
+    /// How close the limit really is, which parts ways with `fill` when the panel is showing
+    /// what is left. Colour follows this, so a healthy number never reads as red.
+    var danger: Double?
     var motion: SpriteMotion = .follow
     /// How long the sprite takes to reach its level when the panel opens.
     var growSeconds: TimeInterval = 2
@@ -45,12 +48,14 @@ struct SpriteCanvas: View {
         TimelineView(.periodic(from: .now, by: 1.0 / 10.0)) { context in
             Canvas(rendersAsynchronously: false) { canvas, size in
                 let now = context.date.timeIntervalSinceReferenceDate
-                let level = SpriteLevel.resolve(
-                    motion: motion, fill: fill,
-                    grown: context.date.timeIntervalSince(appeared),
-                    growSeconds: growSeconds, time: now)
+                let grown = context.date.timeIntervalSince(appeared)
+                let level = SpriteLevel.resolve(motion: motion, fill: fill, grown: grown,
+                                                growSeconds: growSeconds, time: now)
+                // Resolved the same way as the level so the demo sweep still colours as it goes.
+                let shade = SpriteLevel.resolve(motion: motion, fill: danger ?? fill, grown: grown,
+                                                growSeconds: growSeconds, time: now)
                 draw(SpriteFrame(canvas: canvas, size: size, cell: cell, level: level,
-                                 tint: Severity(percent: Int(level * 100)).tint, time: now))
+                                 tint: Severity(percent: Int(shade * 100)).tint, time: now))
             }
         }
         // Re-arms every time the popover opens, so the sprite grows in rather than snapping.

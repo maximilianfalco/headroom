@@ -8,13 +8,14 @@ import SwiftUI
 struct PlantSprite: View {
     var cell: CGFloat = 9
     var fill: Double = 0
+    var danger: Double?
     var motion: SpriteMotion = .follow
 
     /// Rows between one frond pair and the next.
     private static let frondSpacing = 4
 
     var body: some View {
-        SpriteCanvas(cell: cell, fill: fill, motion: motion, growSeconds: 2.5, draw: draw)
+        SpriteCanvas(cell: cell, fill: fill, danger: danger, motion: motion, growSeconds: 2.5, draw: draw)
     }
 
     private func draw(_ frame: SpriteFrame) {

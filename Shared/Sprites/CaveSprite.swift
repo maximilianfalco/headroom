@@ -8,13 +8,14 @@ import SwiftUI
 struct CaveSprite: View {
     var cell: CGFloat = 9
     var fill: Double = 0
+    var danger: Double?
     var motion: SpriteMotion = .follow
 
     /// Rows of solid rock at the ceiling and the floor.
     private static let slab = 1
 
     var body: some View {
-        SpriteCanvas(cell: cell, fill: fill, motion: motion, growSeconds: 1.6, draw: draw)
+        SpriteCanvas(cell: cell, fill: fill, danger: danger, motion: motion, growSeconds: 1.6, draw: draw)
     }
 
     private func draw(_ frame: SpriteFrame) {

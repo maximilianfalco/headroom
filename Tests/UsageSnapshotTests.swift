@@ -36,6 +36,16 @@ struct UsageBucketTests {
         #expect(bucket(resetsIn: seconds + 1).resetsIn == expected)
     }
 
+    @Test("the countdown reads as a sentence on screen")
+    func resetsLabelPrefixes() {
+        #expect(bucket(resetsIn: 1_801).resetsLabel == "Resets in 30m")
+    }
+
+    @Test("no reset date means no countdown to label")
+    func resetsLabelAbsent() {
+        #expect(bucket(resetsIn: nil).resetsLabel == nil)
+    }
+
     @Test("a reset already in the past clamps to zero rather than going negative")
     func pastResetClampsToZero() {
         #expect(bucket(resetsIn: -9_999).resetsIn == "0m")

@@ -36,6 +36,7 @@ enum UsageNotifier {
 
     private static func notifyResets(_ snapshot: UsageSnapshot, previous: UsageSnapshot?) async {
         guard let previous else { return }
+        let display = snapshot.display ?? .used
 
         for bucket in snapshot.buckets {
             guard let old = previous.buckets.first(where: { $0.key == bucket.key }) else { continue }
@@ -51,7 +52,7 @@ enum UsageNotifier {
 
             let content = UNMutableNotificationContent()
             content.title = "\(bucket.label) limit reset"
-            var body = "Was \(old.percent)%, now \(bucket.percent)%."
+            var body = "Was \(old.shownText(display)), now \(bucket.shownText(display))."
             if let next = bucket.resetsIn { body += " Next reset in \(next)." }
             content.body = body
             if old.percent >= Config.soundAt { content.sound = .default }
@@ -70,7 +71,9 @@ enum UsageNotifier {
         for bucket in snapshot.buckets {
             let crossed = Config.notifyThresholds.filter { bucket.percent >= $0 }.max() ?? 0
             let previous = state[bucket.key] ?? 0
-            if crossed > previous { await sendThreshold(bucket, threshold: crossed) }
+            if crossed > previous {
+                await sendThreshold(bucket, threshold: crossed, display: snapshot.display ?? .used)
+            }
             // Writing the lower value on reset is what rearms the next cycle.
             if crossed != previous { state[bucket.key] = crossed }
         }
@@ -78,11 +81,12 @@ enum UsageNotifier {
         UserDefaults.standard.set(state, forKey: stateKey)
     }
 
-    private static func sendThreshold(_ bucket: UsageBucket, threshold: Int) async {
+    private static func sendThreshold(_ bucket: UsageBucket, threshold: Int,
+                                      display: PercentDisplay) async {
         let content = UNMutableNotificationContent()
         content.title = threshold >= 100
             ? "\(bucket.label) limit reached"
-            : "\(bucket.label) at \(bucket.percent)%"
+            : "\(bucket.label) at \(bucket.shownText(display))"
         content.body = bucket.resetsIn.map { "Resets in \($0)." } ?? "Claude plan usage."
         if threshold >= Config.soundAt { content.sound = .default }
 

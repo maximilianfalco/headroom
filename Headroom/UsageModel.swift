@@ -10,6 +10,12 @@ final class UsageModel: ObservableObject {
     @Published var notificationsEnabled = UsageNotifier.isEnabled {
         didSet { UsageNotifier.isEnabled = notificationsEnabled }
     }
+    @Published var percentDisplay = UsageModel.stored(PercentDisplay.self, "percentDisplay") ?? .used {
+        didSet {
+            UserDefaults.standard.set(percentDisplay.rawValue, forKey: "percentDisplay")
+            republish()
+        }
+    }
     @Published var spriteKind = UsageModel.stored(SpriteKind.self, "spriteKind") ?? .plant {
         didSet { UserDefaults.standard.set(spriteKind.rawValue, forKey: "spriteKind") }
     }
@@ -22,9 +28,24 @@ final class UsageModel: ObservableObject {
         UserDefaults.standard.string(forKey: key).flatMap(T.init(rawValue:))
     }
 
-    /// What the sprite draws: whichever limit is closest to its cap.
+    /// What the sprite draws: the same number the panel is showing, whichever that is.
     var worstFill: Double {
+        Double(snapshot?.worst?.shown(percentDisplay) ?? 0) / 100
+    }
+
+    /// What the sprite colours by, which stays tied to the cap however the number is shown.
+    var worstDanger: Double {
         Double(snapshot?.worst?.percent ?? 0) / 100
+    }
+
+    /// The widget only ever sees the snapshot file, so a setting change has to be written
+    /// back through it rather than waiting for the next poll.
+    private func republish() {
+        guard var current = snapshot else { return }
+        current.display = percentDisplay
+        snapshot = current
+        try? UsageStore.save(current)
+        WidgetCenter.shared.reloadAllTimelines()
     }
 
     private var poller: Task<Void, Never>?
@@ -51,6 +72,7 @@ final class UsageModel: ObservableObject {
 
         do {
             var fresh = try await UsageFetcher.fetch()
+            fresh.display = percentDisplay
             fresh.local = await localUsage(for: fresh)
             // Surface store failures too, otherwise the widget silently shows nothing.
             do { try UsageStore.save(fresh) }
@@ -63,6 +85,7 @@ final class UsageModel: ObservableObject {
             var annotated = UsageSnapshot(fetchedAt: previous.fetchedAt,
                                           buckets: previous.buckets,
                                           error: error.localizedDescription)
+            annotated.display = percentDisplay
             // The logs need no credentials, so these numbers survive a failed fetch.
             annotated.local = await localUsage(for: previous)
             snapshot = annotated
