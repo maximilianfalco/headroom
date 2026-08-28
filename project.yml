@@ -53,8 +53,6 @@ targets:
       - path: Shared
         excludes:
           - "**/*.md"
-          - KeychainQuery.swift
-          - TokenStore.swift
           - UsageFetcher.swift
           - LocalUsageReader.swift
           - ModelPricing.swift
