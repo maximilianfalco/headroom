@@ -72,6 +72,7 @@ Pick one in Settings:
 | **Water** | Water rising up the column, with waves. Full means you are out of room. |
 | **Cave** | Rock closing in from the top and bottom. The gap left is your headroom. |
 | **Hourglass** | Sand draining. What is left up top is your room, the heap below is what you spent. |
+| **Blocks** | Pieces falling and stacking up, tetris style. The higher the heap, the less room you have left. |
 
 There is also a **Level** setting. **Usage** follows your real numbers. **Demo** ignores them
 and sweeps the whole range on a loop, which is the only way to see much when you are sitting at
