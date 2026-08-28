@@ -101,11 +101,12 @@ there, with a live preview of the sprite so you can see what you are picking.
 ## Install
 
 ```sh
-brew install --cask maximilianfalco/tap/headroom-bar
+brew install --cask maximilianfalco/headroom/headroom-bar
 ```
 
-The cask is called `headroom-bar`. Plain `headroom` in Homebrew is a different app by
-someone else.
+The cask is called `headroom-bar`. Plain `headroom` in Homebrew is a different app
+(Headroom by Headroom Labs, extraheadroom.com), and the two cannot be installed at
+the same time since both ship a `Headroom.app`.
 
 Headroom is signed but not notarized, so the cask clears the Gatekeeper flag for you.
 
