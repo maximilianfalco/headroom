@@ -1,4 +1,5 @@
 import Foundation
+import Security
 import Testing
 
 private func tempDirectory() throws -> URL {
@@ -76,39 +77,37 @@ struct UsageStoreTests {
     }
 }
 
-struct TokenStoreTests {
-    @Test("a token survives a write and a read of our own keychain item")
-    func roundTrip() {
-        defer { TokenStore.clear() }
-        let expiry = Date(timeIntervalSince1970: 1_787_000_000)
-        TokenStore.save(StoredToken(accessToken: "tok-abc", expiresAt: expiry))
+struct LegacyTokenMirrorTests {
+    private let service = "Headroom.tests.legacy-mirror"
 
-        let loaded = TokenStore.load()
-        #expect(loaded?.accessToken == "tok-abc")
-        #expect(loaded?.expiresAt == expiry)
+    private func query(_ account: String) -> [String: Any] {
+        [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: account,
+        ]
     }
 
-    @Test("saving again replaces the stored token")
-    func saveReplaces() {
-        defer { TokenStore.clear() }
-        TokenStore.save(StoredToken(accessToken: "first", expiresAt: nil))
-        TokenStore.save(StoredToken(accessToken: "second", expiresAt: nil))
-
-        #expect(TokenStore.load()?.accessToken == "second")
+    private func add(_ account: String) {
+        var item = query(account)
+        SecItemDelete(item as CFDictionary)
+        item[kSecValueData as String] = Data("x".utf8)
+        SecItemAdd(item as CFDictionary, nil)
     }
 
-    @Test("clearing leaves nothing behind")
-    func clearRemovesTheItem() {
-        TokenStore.save(StoredToken(accessToken: "gone", expiresAt: nil))
-        TokenStore.clear()
-
-        #expect(TokenStore.load() == nil)
+    private func exists(_ account: String) -> Bool {
+        SecItemCopyMatching(query(account) as CFDictionary, nil) == errSecSuccess
     }
 
-    @Test("clearing when there is nothing stored is not an error")
-    func clearIsIdempotent() {
-        TokenStore.clear()
-        TokenStore.clear()
-        #expect(TokenStore.load() == nil)
+    @Test("cleanup takes the retired item and leaves anything else under that service alone")
+    func removesOnlyTheMirror() {
+        add("claude-oauth")
+        add("keep-me")
+        defer { SecItemDelete(query("keep-me") as CFDictionary) }
+
+        LegacyTokenMirror.remove(service: service)
+
+        #expect(exists("claude-oauth") == false)
+        #expect(exists("keep-me"))
     }
 }

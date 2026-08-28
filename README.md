@@ -84,9 +84,13 @@ arm themselves again when the limit resets. Turn them off from the menu bar pane
 
 ## First run
 
-Headroom reads your Claude Code login out of the keychain, so macOS asks you once whether to
-allow it. Click Always Allow. After that it stays quiet: the 60 second poll asks in a way that
-cannot open a popup, and only the refresh arrow and the Reconnect button can ever ask again.
+Nothing to set up, and no keychain password to type. Headroom reads your Claude Code login
+through the same `security` tool Claude Code used to save it, so macOS already trusts the
+asker and leaves you alone.
+
+The one exception is a login keychain you have locked yourself, which nothing can read
+without your password, Claude Code included. Headroom holds the token until it expires
+rather than re-reading it every minute, so that asks about once an hour, not once a poll.
 
 ## Settings
 
@@ -124,11 +128,11 @@ Adding your own sprite takes one file and two lines. See `Shared/Sprites/README.
 - **One server, one call.** Headroom talks to `api.anthropic.com` and nothing else. No update
   check, no analytics, no crash reports. The call sends your token so the server knows who is
   asking. It sends nothing else.
-- **Keychain.** Headroom reads Claude Code's saved login, then keeps a copy of the token in its
-  own keychain item. The token never lands on disk.
+- **Keychain.** Headroom reads Claude Code's saved login with the `security` tool, the same one
+  Claude Code saves it with. It keeps no copy: the token is held only for the call it is sent on.
 - **What it saves.** One small file holding your percentages, token counts, and cost, plus a
   few notification settings. Nothing else.
-- **Why it is not sandboxed.** A sandboxed app cannot read another app's keychain item. The
+- **Why it is not sandboxed.** A sandboxed app cannot reach another app's login. The
   widget *is* sandboxed. It only reads that small file, and it carries none of the code that
   handles logins or reads logs.
 

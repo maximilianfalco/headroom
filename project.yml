@@ -53,9 +53,8 @@ targets:
       - path: Shared
         excludes:
           - "**/*.md"
-          - KeychainQuery.swift
-          - TokenStore.swift
           - UsageFetcher.swift
+          - LegacyTokenMirror.swift
           - LocalUsageReader.swift
           - ModelPricing.swift
       - path: HeadroomWidget

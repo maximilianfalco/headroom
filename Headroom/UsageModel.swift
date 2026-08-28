@@ -6,7 +6,6 @@ import WidgetKit
 final class UsageModel: ObservableObject {
     @Published private(set) var snapshot: UsageSnapshot?
     @Published private(set) var isRefreshing = false
-    @Published private(set) var needsReconnect = false
     @Published private(set) var notificationsDenied = false
     @Published var notificationsEnabled = UsageNotifier.isEnabled {
         didSet { UsageNotifier.isEnabled = notificationsEnabled }
@@ -32,6 +31,7 @@ final class UsageModel: ObservableObject {
 
     init() {
         snapshot = UsageStore.load()
+        LegacyTokenMirror.remove()
         // Kept off the poll loop because the authorization prompt blocks until the user answers.
         Task { await UsageNotifier.requestAuthorization() }
         poller = Task { [weak self] in
@@ -44,24 +44,20 @@ final class UsageModel: ObservableObject {
 
     deinit { poller?.cancel() }
 
-    /// `allowPrompt` is only ever true for a refresh the user asked for, since reading Claude
-    /// Code's keychain item can put a dialog on screen.
-    func refresh(allowPrompt: Bool = false) async {
+    func refresh() async {
         guard !isRefreshing else { return }
         isRefreshing = true
         defer { isRefreshing = false }
 
         do {
-            var fresh = try await UsageFetcher.fetch(allowPrompt: allowPrompt)
+            var fresh = try await UsageFetcher.fetch()
             fresh.local = await localUsage(for: fresh)
             // Surface store failures too, otherwise the widget silently shows nothing.
             do { try UsageStore.save(fresh) }
             catch { fresh.error = "Snapshot not saved: \(error.localizedDescription)" }
             snapshot = fresh
-            needsReconnect = false
             await UsageNotifier.evaluate(fresh)
         } catch {
-            needsReconnect = (error as? UsageError) == .needsReconnect
             // Keep the last good numbers on screen and annotate them rather than blanking out.
             let previous = snapshot ?? UsageSnapshot(fetchedAt: .now, buckets: [])
             var annotated = UsageSnapshot(fetchedAt: previous.fetchedAt,

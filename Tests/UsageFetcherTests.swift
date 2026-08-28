@@ -12,6 +12,12 @@ struct CredentialParsingTests {
         #expect(token?.accessToken == "abc123")
     }
 
+    @Test("the newline security prints after the password does not break the parse")
+    func trailingNewlineIsTolerated() {
+        let token = credential("{\"claudeAiOauth\":{\"accessToken\":\"abc123\"}}\n")
+        #expect(token?.accessToken == "abc123")
+    }
+
     @Test("milliseconds since the epoch are read as milliseconds")
     func expiryInMilliseconds() {
         let token = credential(#"{"claudeAiOauth":{"accessToken":"a","expiresAt":1787000000000}}"#)
@@ -131,8 +137,7 @@ struct UsageResponseDecodingTests {
 
 struct UsageErrorTests {
     @Test(arguments: [
-        (UsageError.needsReconnect, "Keychain access needed"),
-        (.keychainUnavailable, "Cannot read Claude Code credentials"),
+        (UsageError.keychainUnavailable, "No Claude Code login, run claude to sign in"),
         (.tokenExpired, "Token expired, open Claude Code to refresh"),
         (.http(503), "Request failed (HTTP 503)"),
     ])
@@ -140,27 +145,10 @@ struct UsageErrorTests {
         #expect(error.errorDescription == expected)
     }
 
-    @Test("errors compare by case so the panel can single out a reconnect")
+    @Test("errors compare by case so a dead token is told apart from a failed request")
     func equatableByCase() {
-        #expect(UsageError.needsReconnect == .needsReconnect)
+        #expect(UsageError.tokenExpired == .tokenExpired)
         #expect(UsageError.http(429) != .http(500))
-    }
-}
-
-struct KeychainQueryTests {
-    @Test("a denied query carries both the modern context and the legacy UI policy")
-    func deniesInteraction() {
-        var query: [String: Any] = [:]
-        KeychainQuery.denyInteraction(&query)
-        #expect(query[kSecUseAuthenticationContext as String] != nil)
-        #expect(query[kSecUseAuthenticationUI as String] as? String == kSecUseAuthenticationUIFail as String)
-    }
-
-    @Test("existing query keys are left alone")
-    func preservesExistingKeys() {
-        var query: [String: Any] = [kSecAttrService as String: "svc"]
-        KeychainQuery.denyInteraction(&query)
-        #expect(query[kSecAttrService as String] as? String == "svc")
     }
 }
 
@@ -181,5 +169,37 @@ struct TokenUsabilityTests {
     func tokenInsideTheMarginIsRejected(offset: TimeInterval) {
         let token = StoredToken(accessToken: "abc", expiresAt: Date().addingTimeInterval(offset))
         #expect(throws: UsageError.tokenExpired) { try UsageFetcher.requireUsable(token) }
+    }
+}
+
+struct ProcessRunTests {
+    @Test("a tool that succeeds hands back what it printed")
+    func capturesOutput() {
+        let output = UsageFetcher.run("/bin/echo", ["hello"], timeout: 5)
+        #expect(String(decoding: output ?? Data(), as: UTF8.self) == "hello\n")
+    }
+
+    @Test("a tool that exits nonzero hands back nothing")
+    func nonZeroExitIsNil() {
+        #expect(UsageFetcher.run("/usr/bin/false", [], timeout: 5) == nil)
+    }
+
+    @Test("a tool that is not there hands back nothing rather than crashing")
+    func missingExecutableIsNil() {
+        #expect(UsageFetcher.run("/nowhere/at/all", [], timeout: 5) == nil)
+    }
+
+    @Test("a tool that hangs is killed at the deadline instead of blocking the poll")
+    func timeoutTerminates() {
+        let started = Date()
+        #expect(UsageFetcher.run("/bin/sleep", ["30"], timeout: 0.5) == nil)
+        #expect(Date().timeIntervalSince(started) < 10)
+    }
+
+    @Test("a tool that ignores the polite signal is killed outright")
+    func timeoutOutlastsAnIgnoredSignal() {
+        let started = Date()
+        #expect(UsageFetcher.run("/bin/sh", ["-c", "trap '' TERM; sleep 30"], timeout: 0.5) == nil)
+        #expect(Date().timeIntervalSince(started) < 10)
     }
 }

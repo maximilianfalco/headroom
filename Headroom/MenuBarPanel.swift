@@ -68,10 +68,6 @@ struct MenuBarPanel: View {
                 notificationsOff
             }
 
-            if model.needsReconnect {
-                reconnect
-            }
-
             Divider()
 
             HStack {
@@ -155,20 +151,6 @@ struct MenuBarPanel: View {
                 if let url = URL(string: pane) { NSWorkspace.shared.open(url) }
             }
             .font(.system(size: 11))
-        }
-    }
-
-    private var reconnect: some View {
-        HStack(spacing: 6) {
-            Image(systemName: "key")
-                .foregroundStyle(.orange)
-            Text("Claude Code rotated its token")
-                .font(.system(size: 11))
-                .foregroundStyle(.secondary)
-            Spacer(minLength: 4)
-            Button("Reconnect") { Task { await model.refresh(allowPrompt: true) } }
-                .font(.system(size: 11))
-                .disabled(model.isRefreshing)
         }
     }
 }

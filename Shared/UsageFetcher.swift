@@ -1,62 +1,57 @@
 import Foundation
-import Security
 
 enum UsageError: LocalizedError, Equatable {
-    case needsReconnect
     case keychainUnavailable
     case tokenExpired
     case http(Int)
 
     var errorDescription: String? {
         switch self {
-        case .needsReconnect: return "Keychain access needed"
-        case .keychainUnavailable: return "Cannot read Claude Code credentials"
+        case .keychainUnavailable: return "No Claude Code login, run claude to sign in"
         case .tokenExpired: return "Token expired, open Claude Code to refresh"
         case .http(let code): return "Request failed (HTTP \(code))"
         }
     }
 }
 
+struct StoredToken: Sendable {
+    var accessToken: String
+    var expiresAt: Date?
+
+    /// Retired a little early so a poll does not spend a request finding out it just died.
+    var isUsable: Bool {
+        guard let expiresAt else { return true }
+        return expiresAt > Date().addingTimeInterval(Config.tokenExpiryMargin)
+    }
+}
+
 enum UsageFetcher {
-    /// Reading Claude Code's keychain item can prompt, so the token is sourced from our own
-    /// item first and only re-read when it expires. `allowPrompt` is true for user-driven
-    /// refreshes; the poll loop passes false and reports `.needsReconnect` instead of
-    /// interrupting.
+    /// Holds the token until it expires. Every read spawns a tool, and on a keychain that is
+    /// locked that tool asks for a password, so a poll is the wrong place to do it.
     private actor TokenCache {
         private var cached: StoredToken?
 
-        func token(allowPrompt: Bool) throws -> String {
+        func token() throws -> String {
             if let cached, cached.isUsable { return cached.accessToken }
-            if let stored = TokenStore.load(), stored.isUsable {
-                cached = stored
-                return stored.accessToken
-            }
-            let fresh = try UsageFetcher.requireUsable(UsageFetcher.readClaudeToken(allowPrompt: allowPrompt))
+            let fresh = try UsageFetcher.requireUsable(UsageFetcher.readClaudeToken())
             cached = fresh
-            TokenStore.save(fresh)
             return fresh.accessToken
         }
 
-        func invalidate() {
-            cached = nil
-            TokenStore.clear()
-        }
+        func invalidate() { cached = nil }
     }
 
     private static let tokenCache = TokenCache()
 
-    static func fetch(allowPrompt: Bool = false,
-                      session: URLSession = .shared) async throws -> UsageSnapshot {
-        // Sourced outside the retry, so a token that is already dead fails once rather than
-        // reading Claude Code's keychain item a second time and prompting again.
-        let token = try await tokenCache.token(allowPrompt: allowPrompt)
+    static func fetch(session: URLSession = .shared) async throws -> UsageSnapshot {
+        let token = try await tokenCache.token()
         do {
             return try await request(token: token, session: session)
         } catch UsageError.tokenExpired {
-            // Claude Code rotated the token underneath us. Re-source once so the rotation is
-            // invisible, and only surface the failure if the second attempt is rejected too.
+            // Claude Code rotated the token underneath us. Drop ours and re-read once so the
+            // rotation is invisible, and only fail if the fresh one is rejected too.
             await tokenCache.invalidate()
-            return try await request(token: tokenCache.token(allowPrompt: allowPrompt), session: session)
+            return try await request(token: try await tokenCache.token(), session: session)
         }
     }
 
@@ -83,28 +78,57 @@ enum UsageFetcher {
         return token
     }
 
-    fileprivate static func readClaudeToken(allowPrompt: Bool) throws -> StoredToken {
-        var query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: Config.keychainService,
-            kSecReturnData as String: true,
-            kSecMatchLimit as String: kSecMatchLimitOne,
-        ]
-        if !allowPrompt { KeychainQuery.denyInteraction(&query) }
-
-        var item: CFTypeRef?
-        let status = SecItemCopyMatching(query as CFDictionary, &item)
-        guard status != errSecInteractionNotAllowed else { throw UsageError.needsReconnect }
-        guard status == errSecSuccess,
-              let data = item as? Data,
-              let token = credential(from: data)
+    /// Reads through `/usr/bin/security`, not the Security framework, on purpose. Claude Code
+    /// writes the item with that same tool, so it is the only app on the item's access list.
+    /// Asking through it makes us a trusted caller; asking as Headroom puts a dialog on screen.
+    static func readClaudeToken() throws -> StoredToken {
+        // Claude Code files the item under the login name, so ask for that one first: a stale
+        // item from an earlier name shares the service and would otherwise win. Older items
+        // carry no account at all, which the second pass is there to find.
+        guard let output = securityRead(account: NSUserName()) ?? securityRead(account: nil),
+              let token = credential(from: output)
         else { throw UsageError.keychainUnavailable }
         return token
     }
 
-    /// Split from the keychain read so the credential blob can be parsed without one.
+    private static func securityRead(account: String?) -> Data? {
+        let match = account.map { ["-a", $0] } ?? []
+        return run("/usr/bin/security",
+                   ["find-generic-password"] + match + ["-s", Config.keychainService, "-w"],
+                   timeout: Config.keychainReadTimeout)
+    }
+
+    /// Runs a tool and hands back what it printed, or nil if it fails or outstays the deadline.
+    ///
+    /// The wait is on the process rather than on end of output, because a child that will not
+    /// die can leave a grandchild holding the pipe open, and reading to the end would then wait
+    /// for that grandchild too. A locked keychain makes `security` sit on an unlock dialog, so
+    /// this is the difference between a poll that gives up and one that never returns.
+    static func run(_ executable: String, _ arguments: [String], timeout: TimeInterval) -> Data? {
+        let task = Process()
+        task.executableURL = URL(fileURLWithPath: executable)
+        task.arguments = arguments
+        let pipe = Pipe()
+        task.standardOutput = pipe
+        task.standardError = FileHandle.nullDevice
+
+        let exited = DispatchSemaphore(value: 0)
+        task.terminationHandler = { _ in exited.signal() }
+        guard (try? task.run()) != nil else { return nil }
+
+        guard exited.wait(timeout: .now() + timeout) == .success else {
+            kill(task.processIdentifier, SIGKILL)
+            return nil
+        }
+        guard task.terminationStatus == 0 else { return nil }
+        return try? pipe.fileHandleForReading.readToEnd()
+    }
+
+    /// Split from the keychain read so the credential blob can be parsed without one. Trims
+    /// because `security` prints a newline after the password.
     static func credential(from data: Data) -> StoredToken? {
-        guard let creds = try? JSONDecoder().decode(Credentials.self, from: data) else { return nil }
+        let text = String(decoding: data, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let creds = try? JSONDecoder().decode(Credentials.self, from: Data(text.utf8)) else { return nil }
         return StoredToken(accessToken: creds.claudeAiOauth.accessToken,
                            expiresAt: creds.claudeAiOauth.expiresAt)
     }

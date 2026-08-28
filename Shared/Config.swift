@@ -15,6 +15,8 @@ enum Config {
     static let requestTimeout: TimeInterval = 20
     /// Tokens are retired this early, so a poll never spends a request on a token that just died.
     static let tokenExpiryMargin: TimeInterval = 60
+    /// What Claude Code allows its own lookup, and long enough that a slow read still lands.
+    static let keychainReadTimeout: TimeInterval = 5
 
     static let pollInterval: Duration = .seconds(60)
 
