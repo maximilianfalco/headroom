@@ -129,7 +129,8 @@ Adding your own sprite takes one file and two lines. See `Shared/Sprites/README.
   check, no analytics, no crash reports. The call sends your token so the server knows who is
   asking. It sends nothing else.
 - **Keychain.** Headroom reads Claude Code's saved login with the `security` tool, the same one
-  Claude Code saves it with. It keeps no copy: the token is held only for the call it is sent on.
+  Claude Code saves it with. It writes no copy of its own: the token is held in memory until it
+  expires, and never lands on disk.
 - **What it saves.** One small file holding your percentages, token counts, and cost, plus a
   few notification settings. Nothing else.
 - **Why it is not sandboxed.** A sandboxed app cannot reach another app's login. The
