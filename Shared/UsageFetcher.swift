@@ -7,7 +7,7 @@ enum UsageError: LocalizedError, Equatable {
 
     var errorDescription: String? {
         switch self {
-        case .keychainUnavailable: return "Cannot read Claude Code credentials"
+        case .keychainUnavailable: return "No Claude Code login, run claude to sign in"
         case .tokenExpired: return "Token expired, open Claude Code to refresh"
         case .http(let code): return "Request failed (HTTP \(code))"
         }

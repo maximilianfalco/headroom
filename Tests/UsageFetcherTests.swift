@@ -137,7 +137,7 @@ struct UsageResponseDecodingTests {
 
 struct UsageErrorTests {
     @Test(arguments: [
-        (UsageError.keychainUnavailable, "Cannot read Claude Code credentials"),
+        (UsageError.keychainUnavailable, "No Claude Code login, run claude to sign in"),
         (.tokenExpired, "Token expired, open Claude Code to refresh"),
         (.http(503), "Request failed (HTTP 503)"),
     ])
