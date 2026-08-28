@@ -54,6 +54,7 @@ targets:
         excludes:
           - "**/*.md"
           - UsageFetcher.swift
+          - LegacyTokenMirror.swift
           - LocalUsageReader.swift
           - ModelPricing.swift
       - path: HeadroomWidget

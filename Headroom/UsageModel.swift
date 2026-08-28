@@ -31,6 +31,7 @@ final class UsageModel: ObservableObject {
 
     init() {
         snapshot = UsageStore.load()
+        LegacyTokenMirror.remove()
         // Kept off the poll loop because the authorization prompt blocks until the user answers.
         Task { await UsageNotifier.requestAuthorization() }
         poller = Task { [weak self] in
