@@ -13,6 +13,7 @@ extension Severity {
 /// Circular gauge used as the hero element in the small widget.
 struct UsageRing: View {
     let bucket: UsageBucket
+    var display: PercentDisplay = .used
     var lineWidth: CGFloat = 10
 
     var body: some View {
@@ -20,15 +21,15 @@ struct UsageRing: View {
             Circle()
                 .stroke(bucket.severity.tint.opacity(0.18), lineWidth: lineWidth)
             Circle()
-                .trim(from: 0, to: min(1, Double(bucket.percent) / 100))
+                .trim(from: 0, to: min(1, Double(bucket.shown(display)) / 100))
                 .stroke(bucket.severity.tint,
                         style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))
                 .rotationEffect(.degrees(-90))
             VStack(spacing: 0) {
-                Text("\(bucket.percent)")
+                Text("\(bucket.shown(display))")
                     .font(.system(size: 26, weight: .semibold, design: .rounded))
                     .contentTransition(.numericText())
-                Text("%")
+                Text(display == .used ? "%" : "% left")
                     .font(.system(size: 11, weight: .medium, design: .rounded))
                     .foregroundStyle(.secondary)
             }
@@ -39,6 +40,7 @@ struct UsageRing: View {
 /// Horizontal bar row used in the medium widget and the menu bar panel.
 struct UsageBar: View {
     let bucket: UsageBucket
+    var display: PercentDisplay = .used
 
     var body: some View {
         VStack(spacing: 4) {
@@ -46,12 +48,12 @@ struct UsageBar: View {
                 Text(bucket.label)
                     .font(.system(size: 12, weight: .medium))
                 Spacer(minLength: 4)
-                if let resets = bucket.resetsIn {
+                if let resets = bucket.resetsLabel {
                     Text(resets)
                         .font(.system(size: 10, design: .rounded))
                         .foregroundStyle(.tertiary)
                 }
-                Text("\(bucket.percent)%")
+                Text(bucket.shownText(display))
                     .font(.system(size: 12, weight: .semibold, design: .rounded))
                     .foregroundStyle(bucket.severity.tint)
                     .monospacedDigit()
@@ -61,7 +63,7 @@ struct UsageBar: View {
                     Capsule().fill(bucket.severity.tint.opacity(0.18))
                     Capsule()
                         .fill(bucket.severity.tint)
-                        .frame(width: geo.size.width * min(1, Double(bucket.percent) / 100))
+                        .frame(width: geo.size.width * min(1, Double(bucket.shown(display)) / 100))
                 }
             }
             .frame(height: 5)

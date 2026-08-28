@@ -9,6 +9,13 @@ enum Severity: String, Codable {
     }
 }
 
+enum PercentDisplay: String, Codable, CaseIterable, Identifiable {
+    case used, remaining
+
+    var id: String { rawValue }
+    var label: String { self == .used ? "Used" : "Remaining" }
+}
+
 struct UsageBucket: Codable, Identifiable, Equatable {
     var key: String
     var label: String
@@ -16,7 +23,23 @@ struct UsageBucket: Codable, Identifiable, Equatable {
     var resetsAt: Date?
 
     var id: String { key }
+    /// Deliberately not routed through `shown`: colour says how close the cap is, so a panel
+    /// reading "93% left" still shows green.
     var severity: Severity { Severity(percent: percent) }
+
+    /// The number to put on screen. A limit can report over 100, so headroom floors at zero.
+    func shown(_ display: PercentDisplay) -> Int {
+        display == .used ? percent : max(0, 100 - percent)
+    }
+
+    /// Only remaining says which it is, because a bare percentage already reads as used.
+    func shownText(_ display: PercentDisplay) -> String {
+        display == .used ? "\(percent)%" : "\(shown(.remaining))% left"
+    }
+
+    /// The countdown as it appears on screen. Notifications word it their own way and use
+    /// `resetsIn` directly.
+    var resetsLabel: String? { resetsIn.map { "Resets in \($0)" } }
 
     var resetsIn: String? {
         guard let resetsAt else { return nil }
@@ -50,6 +73,9 @@ struct UsageSnapshot: Codable, Equatable {
     /// Token counts and cost from the local logs. Optional so a snapshot written before this
     /// existed still decodes.
     var local: LocalUsage?
+    /// The widget cannot see the app's settings, so the choice travels with the data it draws.
+    /// Optional so a snapshot written before this existed still decodes.
+    var display: PercentDisplay?
 
     var worst: UsageBucket? {
         buckets.max { $0.percent < $1.percent }

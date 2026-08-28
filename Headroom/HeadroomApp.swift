@@ -8,7 +8,7 @@ struct HeadroomApp: App {
         MenuBarExtra {
             MenuBarPanel(model: model)
         } label: {
-            MenuBarLabel(snapshot: model.snapshot)
+            MenuBarLabel(snapshot: model.snapshot, display: model.percentDisplay)
         }
         .menuBarExtraStyle(.window)
 
@@ -20,6 +20,7 @@ struct HeadroomApp: App {
 
 private struct MenuBarLabel: View {
     let snapshot: UsageSnapshot?
+    let display: PercentDisplay
 
     var body: some View {
         if let worst = snapshot?.worst {
@@ -27,8 +28,7 @@ private struct MenuBarLabel: View {
             HStack(spacing: 3) {
                 Image(systemName: worst.severity == .normal ? "circle.fill" : "exclamationmark.circle.fill")
                     .imageScale(.small)
-                // Remaining rather than consumed, matching the app's name.
-                Text("\(100 - worst.percent)% left")
+                Text(worst.shownText(display))
                     .monospacedDigit()
             }
             .font(.system(size: 12, weight: .medium))

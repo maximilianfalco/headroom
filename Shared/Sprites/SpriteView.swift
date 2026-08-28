@@ -5,16 +5,17 @@ import SwiftUI
 struct SpriteView: View {
     let kind: SpriteKind
     var fill: Double = 0
+    var danger: Double?
     var motion: SpriteMotion = .follow
     var cell: CGFloat = 9
 
     var body: some View {
         switch kind {
-        case .plant: PlantSprite(cell: cell, fill: fill, motion: motion)
-        case .cave: CaveSprite(cell: cell, fill: fill, motion: motion)
-        case .water: WaterSprite(cell: cell, fill: fill, motion: motion)
-        case .hourglass: HourglassSprite(cell: cell, fill: fill, motion: motion)
-        case .blocks: BlocksSprite(cell: cell, fill: fill, motion: motion)
+        case .plant: PlantSprite(cell: cell, fill: fill, danger: danger, motion: motion)
+        case .cave: CaveSprite(cell: cell, fill: fill, danger: danger, motion: motion)
+        case .water: WaterSprite(cell: cell, fill: fill, danger: danger, motion: motion)
+        case .hourglass: HourglassSprite(cell: cell, fill: fill, danger: danger, motion: motion)
+        case .blocks: BlocksSprite(cell: cell, fill: fill, danger: danger, motion: motion)
         }
     }
 }

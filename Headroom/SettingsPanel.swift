@@ -19,9 +19,9 @@ struct SettingsPanel: View {
     private var preview: some View {
         VStack(spacing: 8) {
             SpriteView(kind: model.spriteKind, fill: model.worstFill,
-                       motion: model.spriteMotion, cell: 7)
+                       danger: model.worstDanger, motion: model.spriteMotion, cell: 7)
             Text(model.spriteMotion == .follow
-                 ? "\(Int(model.worstFill * 100))% used"
+                 ? "\(Int(model.worstFill * 100))\(model.percentDisplay == .used ? "% used" : "% left")"
                  : "sweeping")
                 .font(.system(size: 10))
                 .foregroundStyle(.tertiary)
@@ -33,6 +33,17 @@ struct SettingsPanel: View {
 
     private var form: some View {
         Form {
+            Section("Percentages") {
+                Picker("Show", selection: $model.percentDisplay) {
+                    ForEach(PercentDisplay.allCases) { Text($0.label).tag($0) }
+                }
+                Text(model.percentDisplay == .used
+                     ? "How much of each limit you have spent."
+                     : "How much of each limit you have left. Colours still warn near the cap.")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+            }
+
             Section("Sprite") {
                 Picker("Show", selection: $model.spriteKind) {
                     ForEach(SpriteKind.allCases) { Text($0.label).tag($0) }

@@ -5,12 +5,13 @@ import SwiftUI
 struct BlocksSprite: View {
     var cell: CGFloat = 9
     var fill: Double = 0
+    var danger: Double?
     var motion: SpriteMotion = .follow
 
     @State private var board = BlocksBoard()
 
     var body: some View {
-        SpriteCanvas(cell: cell, fill: fill, motion: motion, growSeconds: 2) { frame in
+        SpriteCanvas(cell: cell, fill: fill, danger: danger, motion: motion, growSeconds: 2) { frame in
             board.draw(frame)
         }
     }

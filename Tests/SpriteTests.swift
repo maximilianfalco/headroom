@@ -30,6 +30,13 @@ struct SpriteLevelTests {
         #expect(isClose(SpriteLevel.easedIn(0.8, grown: -5, over: 2), 0))
     }
 
+    @Test("demo sweeps shape and colour together, so a swept sprite still changes colour")
+    func demoResolvesShapeAndColourAlike() {
+        let shape = SpriteLevel.resolve(motion: .demo, fill: 0.93, grown: 99, growSeconds: 2, time: 5)
+        let colour = SpriteLevel.resolve(motion: .demo, fill: 0.07, grown: 99, growSeconds: 2, time: 5)
+        #expect(isClose(shape, colour))
+    }
+
     @Test("demo ignores usage entirely")
     func demoIgnoresFill() {
         let atZero = SpriteLevel.resolve(motion: .demo, fill: 0, grown: 99, growSeconds: 2, time: 8)

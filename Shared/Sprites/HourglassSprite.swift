@@ -8,10 +8,11 @@ import SwiftUI
 struct HourglassSprite: View {
     var cell: CGFloat = 9
     var fill: Double = 0
+    var danger: Double?
     var motion: SpriteMotion = .follow
 
     var body: some View {
-        SpriteCanvas(cell: cell, fill: fill, motion: motion, growSeconds: 2, draw: draw)
+        SpriteCanvas(cell: cell, fill: fill, danger: danger, motion: motion, growSeconds: 2, draw: draw)
     }
 
     private func draw(_ frame: SpriteFrame) {
