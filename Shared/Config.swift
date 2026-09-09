@@ -9,6 +9,22 @@ enum Config {
     static let claudeProjectsPath = ".claude/projects"
     /// The session limit runs on a five hour window, which the local block is aligned to.
     static let sessionWindow: TimeInterval = 5 * 3600
+    /// The weekly limits, per model ones included, run on a seven day window.
+    static let weeklyWindow: TimeInterval = 7 * 86_400
+
+    /// No projection until this share of a window has passed. Before that one burst scales
+    /// to an absurd number.
+    static let projectionWarmup = 0.03
+    /// The session pace is read over this span, so it follows what you are doing now.
+    static let projectionTrailing: TimeInterval = 30 * 60
+    /// A trailing sample younger than this gives a pace too noisy to use.
+    static let projectionTrailingMinimum: TimeInterval = 5 * 60
+    /// `resets_at` drifts by seconds between polls. Closer than this is the same window.
+    static let resetMatchTolerance: TimeInterval = 60
+    /// Samples older than this are dropped. A day is enough history to learn the ratio.
+    static let sampleRetention: TimeInterval = 24 * 3600
+    /// Points of paired history needed before the token ratio is trusted.
+    static let ratioMinimumPoints = 5
 
     static let usageEndpoint = URL(string: "https://api.anthropic.com/api/oauth/usage")!
     static let oauthBetaHeader = "oauth-2025-04-20"

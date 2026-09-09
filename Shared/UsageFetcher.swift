@@ -195,7 +195,7 @@ enum UsageFetcher {
 
         var buckets: [UsageBucket] = []
         if let b = response.fiveHour, let pct = b.utilization {
-            buckets.append(UsageBucket(key: "five_hour", label: "Session",
+            buckets.append(UsageBucket(key: UsageBucket.sessionKey, label: "Session",
                                        percent: Int(pct.rounded()), resetsAt: date(b.resetsAt)))
         }
         if let b = response.sevenDay, let pct = b.utilization {

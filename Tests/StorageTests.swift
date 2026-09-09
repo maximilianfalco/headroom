@@ -77,6 +77,49 @@ struct UsageStoreTests {
     }
 }
 
+struct SampleStoreTests {
+    private let samples = [
+        UsageSample(key: "five_hour", at: Date(timeIntervalSince1970: 1_787_000_000), percent: 11,
+                    resetsAt: Date(timeIntervalSince1970: 1_787_003_600), cost: 4.5),
+        UsageSample(key: "seven_day", at: Date(timeIntervalSince1970: 1_787_000_000), percent: 40,
+                    resetsAt: nil, cost: nil),
+    ]
+
+    @Test("samples survive a write and a read")
+    func roundTrip() throws {
+        let dir = try tempDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+
+        try UsageStore.saveSamples(samples, to: dir)
+        #expect(UsageStore.loadSamples(from: dir) == samples)
+    }
+
+    @Test("samples and the snapshot live in separate files")
+    func separateFromSnapshot() throws {
+        let dir = try tempDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+
+        try UsageStore.saveSamples(samples, to: dir)
+        #expect(UsageStore.load(from: dir) == nil)
+    }
+
+    @Test("nothing written yet reads as no samples")
+    func missingFileReadsAsEmpty() throws {
+        let dir = try tempDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        #expect(UsageStore.loadSamples(from: dir).isEmpty)
+    }
+
+    @Test("a corrupt file reads as no samples rather than throwing")
+    func corruptFileReadsAsEmpty() throws {
+        let dir = try tempDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        try "[ not samples".write(to: dir.appending(path: "samples.json"),
+                                  atomically: true, encoding: .utf8)
+        #expect(UsageStore.loadSamples(from: dir).isEmpty)
+    }
+}
+
 struct LegacyTokenMirrorTests {
     private let service = "Headroom.tests.legacy-mirror"
 

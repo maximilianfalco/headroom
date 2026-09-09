@@ -52,6 +52,9 @@ final class UsageModel: ObservableObject {
         do {
             var fresh = try await UsageFetcher.fetch()
             fresh.local = await localUsage(for: fresh)
+            let samples = Projection.apply(to: &fresh, history: UsageStore.loadSamples(), now: .now)
+            // The marker is an extra, so a history that cannot be kept only costs the projection.
+            try? UsageStore.saveSamples(samples)
             // Surface store failures too, otherwise the widget silently shows nothing.
             do { try UsageStore.save(fresh) }
             catch { fresh.error = "Snapshot not saved: \(error.localizedDescription)" }
@@ -74,7 +77,7 @@ final class UsageModel: ObservableObject {
     }
 
     private func localUsage(for snapshot: UsageSnapshot) async -> LocalUsage? {
-        let resets = snapshot.buckets.first { $0.key == "five_hour" }?.resetsAt
+        let resets = snapshot.buckets.first { $0.key == UsageBucket.sessionKey }?.resetsAt
         return await LocalUsageReader.shared.usage(sessionEndsAt: resets, now: .now)
     }
 }

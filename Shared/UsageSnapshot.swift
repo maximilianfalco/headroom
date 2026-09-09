@@ -10,13 +10,25 @@ enum Severity: String, Codable {
 }
 
 struct UsageBucket: Codable, Identifiable, Equatable {
+    /// The five hour limit. The only one the local logs are aligned to.
+    static let sessionKey = "five_hour"
+
     var key: String
     var label: String
     var percent: Int
     var resetsAt: Date?
+    var projected: Int?
 
     var id: String { key }
     var severity: Severity { Severity(percent: percent) }
+
+    var projectionText: String? {
+        guard let projected, projected > percent,
+              let resetsAt, resetsAt > .now, let resetsIn
+        else { return nil }
+        if projected >= 100 { return "Expected to hit the limit before it resets" }
+        return "~\(projected)% when this resets in \(resetsIn)"
+    }
 
     var resetsIn: String? {
         guard let resetsAt else { return nil }

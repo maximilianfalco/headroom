@@ -50,6 +50,66 @@ struct UsageBucketTests {
     func severityDerived() {
         #expect(UsageBucket(key: "k", label: "L", percent: 96, resetsAt: nil).severity == .critical)
     }
+
+    @Test("a bucket written before projections existed still decodes")
+    func decodesWithoutProjection() throws {
+        let json = #"{"key":"five_hour","label":"Session","percent":8}"#
+        let bucket = try JSONDecoder().decode(UsageBucket.self, from: Data(json.utf8))
+        #expect(bucket.projected == nil)
+    }
+
+    @Test("the projection survives a round trip")
+    func projectionRoundTrips() throws {
+        var bucket = UsageBucket(key: "k", label: "L", percent: 10, resetsAt: nil)
+        bucket.projected = 42
+        let decoded = try JSONDecoder().decode(UsageBucket.self, from: JSONEncoder().encode(bucket))
+        #expect(decoded.projected == 42)
+    }
+}
+
+struct ProjectionTextTests {
+    private func bucket(percent: Int, projected: Int?, resetsIn: TimeInterval? = 3_601) -> UsageBucket {
+        var bucket = UsageBucket(key: "k", label: "L", percent: percent,
+                                 resetsAt: resetsIn.map { Date().addingTimeInterval($0) })
+        bucket.projected = projected
+        return bucket
+    }
+
+    @Test("no projection means no marker text")
+    func noProjection() {
+        #expect(bucket(percent: 10, projected: nil).projectionText == nil)
+    }
+
+    @Test(arguments: [10, 9, 0])
+    func noHigherThanCurrentMeansNoMarker(projected: Int) {
+        #expect(bucket(percent: 10, projected: projected).projectionText == nil)
+    }
+
+    @Test("one point above the current percent is enough for a marker")
+    func onePointAbove() {
+        #expect(bucket(percent: 10, projected: 11).projectionText == "~11% when this resets in 1h 0m")
+    }
+
+    @Test("reaching the limit reads as a warning, not a number")
+    func reachingTheLimit() {
+        #expect(bucket(percent: 10, projected: 100).projectionText == "Expected to hit the limit before it resets")
+    }
+
+    @Test("a projection past one hundred still reads as the limit warning")
+    func pastTheLimit() {
+        #expect(bucket(percent: 10, projected: 140).projectionText == "Expected to hit the limit before it resets")
+    }
+
+    @Test("a projection whose reset has already passed shows no marker")
+    func pastResetShowsNoMarker() {
+        #expect(bucket(percent: 10, projected: 50, resetsIn: -60).projectionText == nil)
+        #expect(bucket(percent: 10, projected: 100, resetsIn: -60).projectionText == nil)
+    }
+
+    @Test("a projection with no reset time shows no marker")
+    func noResetTimeShowsNoMarker() {
+        #expect(bucket(percent: 10, projected: 50, resetsIn: nil).projectionText == nil)
+    }
 }
 
 struct UsageSnapshotTests {
