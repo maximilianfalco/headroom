@@ -16,7 +16,8 @@ struct MenuBarPanel: View {
     }
 
     private var sprite: some View {
-        SpriteView(kind: model.spriteKind, fill: model.worstFill, motion: model.spriteMotion)
+        SpriteView(kind: model.spriteKind, fill: model.worstFill,
+                   danger: model.worstDanger, motion: model.spriteMotion)
     }
 
     private var panel: some View {
@@ -48,7 +49,9 @@ struct MenuBarPanel: View {
 
             if let snapshot = model.snapshot, !snapshot.buckets.isEmpty {
                 VStack(spacing: 10) {
-                    ForEach(snapshot.buckets) { UsageBar(bucket: $0, showsProjection: true) }
+                    ForEach(snapshot.buckets) {
+                        UsageBar(bucket: $0, display: model.percentDisplay, showsProjection: true)
+                    }
                 }
                 UsageFooter(snapshot: snapshot)
             } else if let error = model.snapshot?.error {

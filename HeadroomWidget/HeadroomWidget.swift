@@ -42,6 +42,9 @@ struct HeadroomWidgetView: View {
         }
     }
 
+    /// The app cannot reach the widget's defaults, so the choice arrives on the snapshot.
+    private var display: PercentDisplay { entry.snapshot?.display ?? .used }
+
     /// Falls back to the highest limit when nothing is configured or the choice has gone away.
     private func focused(_ snapshot: UsageSnapshot) -> UsageBucket? {
         snapshot.buckets.first { $0.label == entry.selectedLabel } ?? snapshot.worst
@@ -51,13 +54,13 @@ struct HeadroomWidgetView: View {
     private func small(_ snapshot: UsageSnapshot) -> some View {
         if let bucket = focused(snapshot) {
             VStack(spacing: 8) {
-                UsageRing(bucket: bucket)
+                UsageRing(bucket: bucket, display: display)
                     .frame(width: 78, height: 78)
                 VStack(spacing: 1) {
                     Text(bucket.label)
                         .font(.system(size: 11, weight: .medium))
-                    if let resets = bucket.resetsIn {
-                        Text("resets in \(resets)")
+                    if let resets = bucket.resetsLabel {
+                        Text(resets)
                             .font(.system(size: 9))
                             .foregroundStyle(.secondary)
                     }
@@ -79,7 +82,7 @@ struct HeadroomWidgetView: View {
                 .font(.system(size: 9, weight: .semibold))
                 .foregroundStyle(.tertiary)
                 .tracking(0.8)
-            ForEach(ordered.prefix(4)) { UsageBar(bucket: $0) }
+            ForEach(ordered.prefix(4)) { UsageBar(bucket: $0, display: display) }
             Spacer(minLength: 0)
         }
     }
@@ -94,13 +97,13 @@ struct HeadroomWidgetView: View {
         VStack(alignment: .leading, spacing: 14) {
             if let hero {
                 HStack(spacing: 14) {
-                    UsageRing(bucket: hero, lineWidth: 9)
+                    UsageRing(bucket: hero, display: display, lineWidth: 9)
                         .frame(width: 84, height: 84)
                     VStack(alignment: .leading, spacing: 3) {
                         Text(hero.label)
                             .font(.system(size: 15, weight: .semibold))
-                        if let resets = hero.resetsIn {
-                            Text("resets in \(resets)")
+                        if let resets = hero.resetsLabel {
+                            Text(resets)
                                 .font(.system(size: 11))
                                 .foregroundStyle(.secondary)
                         }
@@ -112,7 +115,7 @@ struct HeadroomWidgetView: View {
             if !rest.isEmpty {
                 Divider()
                 VStack(spacing: 12) {
-                    ForEach(rest) { UsageBar(bucket: $0) }
+                    ForEach(rest) { UsageBar(bucket: $0, display: display) }
                 }
             }
 

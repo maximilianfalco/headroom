@@ -202,7 +202,7 @@ jobs:
         env:
           # A token with contents:write on the tap. GITHUB_TOKEN cannot reach another repo.
           GH_TOKEN: ${{ secrets.TAP_TOKEN }}
-          TAP: maximilianfalco/homebrew-tap
+          TAP: maximilianfalco/homebrew-headroom
           CASK: Casks/headroom-bar.rb
         run: |
           gh api "repos/$TAP/contents/$CASK" --jq '.content' | base64 --decode > cask.rb
@@ -223,6 +223,6 @@ jobs:
             echo "- dry run: ${{ inputs.dry_run }}"
             echo ""
             echo '```sh'
-            echo "brew install --cask maximilianfalco/tap/headroom-bar"
+            echo "brew install --cask maximilianfalco/headroom/headroom-bar"
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"

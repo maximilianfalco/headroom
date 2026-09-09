@@ -30,8 +30,8 @@ this session and for today, plus how fast you are spending them.
 
 A small flame on a bar marks where that limit is expected to be when it resets, worked out
 from how fast it has been climbing and how fast Claude Code has been spending lately.
-Hover it for the number. A red flame at the end of the bar means you are on track to hit the
-limit before the reset. The flame stays hidden while nothing is moving.
+Hover it for the number. A flame sitting where the bar runs out means you are on track to hit
+the limit before the reset. The flame stays hidden while nothing is moving.
 
 **On the desktop**, pick a size. Small shows your worst limit as a ring. Medium lists every
 limit as bars. Large leads with a ring and lists the rest below it. Right click the desktop and
@@ -106,11 +106,12 @@ there, with a live preview of the sprite so you can see what you are picking.
 ## Install
 
 ```sh
-brew install --cask maximilianfalco/tap/headroom-bar
+brew install --cask maximilianfalco/headroom/headroom-bar
 ```
 
-The cask is called `headroom-bar`. Plain `headroom` in Homebrew is a different app by
-someone else.
+The cask is called `headroom-bar`. Plain `headroom` in Homebrew is a different app
+(Headroom by Headroom Labs, extraheadroom.com), and the two cannot be installed at
+the same time since both ship a `Headroom.app`.
 
 Headroom is signed but not notarized, so the cask clears the Gatekeeper flag for you.
 

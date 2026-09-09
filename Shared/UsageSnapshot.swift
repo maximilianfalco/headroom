@@ -9,6 +9,22 @@ enum Severity: String, Codable {
     }
 }
 
+enum PercentDisplay: String, Codable, CaseIterable, Identifiable {
+    case used, remaining
+
+    var id: String { rawValue }
+    var label: String { self == .used ? "Used" : "Remaining" }
+
+    /// Flips a used percent to whichever way is on screen. A limit can report over 100,
+    /// so headroom floors at zero.
+    func percent(of used: Int) -> Int { self == .used ? used : max(0, 100 - used) }
+
+    /// Only remaining says which it is, because a bare percentage already reads as used.
+    func text(of used: Int) -> String {
+        self == .used ? "\(used)%" : "\(percent(of: used))% left"
+    }
+}
+
 struct UsageBucket: Codable, Identifiable, Equatable {
     /// The five hour limit. The only one the local logs are aligned to.
     static let sessionKey = "five_hour"
@@ -20,15 +36,31 @@ struct UsageBucket: Codable, Identifiable, Equatable {
     var projected: Int?
 
     var id: String { key }
+    /// Deliberately not routed through `shown`: colour says how close the cap is, so a panel
+    /// reading "93% left" still shows green.
     var severity: Severity { Severity(percent: percent) }
 
-    var projectionText: String? {
+    /// The number to put on screen.
+    func shown(_ display: PercentDisplay) -> Int { display.percent(of: percent) }
+
+    func shownText(_ display: PercentDisplay) -> String { display.text(of: percent) }
+
+    /// The projection on the bar's axis, so the marker lands where the bar will.
+    func shownProjection(_ display: PercentDisplay) -> Int? {
+        projected.map(display.percent(of:))
+    }
+
+    func projectionText(_ display: PercentDisplay) -> String? {
         guard let projected, projected > percent,
               let resetsAt, resetsAt > .now, let resetsIn
         else { return nil }
         if projected >= 100 { return "Expected to hit the limit before it resets" }
-        return "~\(projected)% when this resets in \(resetsIn)"
+        return "~\(display.text(of: projected)) when this resets in \(resetsIn)"
     }
+
+    /// The countdown as it appears on screen. Notifications word it their own way and use
+    /// `resetsIn` directly.
+    var resetsLabel: String? { resetsIn.map { "Resets in \($0)" } }
 
     var resetsIn: String? {
         guard let resetsAt else { return nil }
@@ -62,6 +94,9 @@ struct UsageSnapshot: Codable, Equatable {
     /// Token counts and cost from the local logs. Optional so a snapshot written before this
     /// existed still decodes.
     var local: LocalUsage?
+    /// The widget cannot see the app's settings, so the choice travels with the data it draws.
+    /// Optional so a snapshot written before this existed still decodes.
+    var display: PercentDisplay?
 
     var worst: UsageBucket? {
         buckets.max { $0.percent < $1.percent }
