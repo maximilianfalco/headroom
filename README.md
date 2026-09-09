@@ -28,6 +28,11 @@ thing on your desktop.
 cap. Each one shows how far along you are and when it resets. Below that, tokens and cost for
 this session and for today, plus how fast you are spending them.
 
+A small flame on a bar marks where that limit is expected to be when it resets, worked out
+from how fast it has been climbing and how fast Claude Code has been spending lately.
+Hover it for the number. A red flame at the end of the bar means you are on track to hit the
+limit before the reset. The flame stays hidden while nothing is moving.
+
 **On the desktop**, pick a size. Small shows your worst limit as a ring. Medium lists every
 limit as bars. Large leads with a ring and lists the rest below it. Right click the desktop and
 pick Edit Widgets, or open Notification Center, then search for "Headroom".
@@ -132,8 +137,10 @@ Adding your own sprite takes one file and two lines. See `Shared/Sprites/README.
 - **Keychain.** Headroom reads Claude Code's saved login with the `security` tool, the same one
   Claude Code saves it with. It writes no copy of its own: the token is held in memory until it
   expires, and never lands on disk.
-- **What it saves.** One small file holding your percentages, token counts, and cost, plus a
-  few notification settings. Nothing else.
+- **What it saves.** Two small files, plus a few notification settings. One holds your current
+  percentages, token counts, and cost. The other is a day of history for the flame: for each
+  limit, the time of each poll, its percentage, and when it resets, plus what the session has
+  cost so far. Anything older than a day is dropped. Nothing else.
 - **Why it is not sandboxed.** A sandboxed app cannot reach another app's login. The
   widget *is* sandboxed. It only reads that small file, and it carries none of the code that
   handles logins or reads logs.
