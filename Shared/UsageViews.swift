@@ -41,6 +41,7 @@ struct UsageRing: View {
 struct UsageBar: View {
     let bucket: UsageBucket
     var display: PercentDisplay = .used
+    var showsProjection = false
 
     var body: some View {
         VStack(spacing: 4) {
@@ -64,6 +65,16 @@ struct UsageBar: View {
                     Capsule()
                         .fill(bucket.severity.tint)
                         .frame(width: geo.size.width * min(1, Double(bucket.shown(display)) / 100))
+                    if showsProjection, let tip = bucket.projectionText(display),
+                       let projected = bucket.shownProjection(display) {
+                        Image(systemName: "flame.fill")
+                            .font(.system(size: 9))
+                            .foregroundStyle(.linearGradient(colors: [.red, .orange, .yellow],
+                                                             startPoint: .top, endPoint: .bottom))
+                            .position(x: geo.size.width * min(1, Double(projected) / 100),
+                                      y: geo.size.height / 2)
+                            .help(tip)
+                    }
                 }
             }
             .frame(height: 5)

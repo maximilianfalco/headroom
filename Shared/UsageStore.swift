@@ -3,6 +3,7 @@ import Foundation
 /// Shared read/write point for the snapshot the app fetches and the widget renders.
 enum UsageStore {
     private static let fileName = "usage.json"
+    private static let samplesFileName = "samples.json"
 
     private static var appGroupID: String? {
         Bundle.main.object(forInfoDictionaryKey: "AppGroupIdentifier") as? String
@@ -52,17 +53,33 @@ enum UsageStore {
     }()
 
     static func load(from override: URL? = nil) -> UsageSnapshot? {
-        let url = (override ?? directory).appending(path: fileName)
-        guard let data = try? Data(contentsOf: url) else { return nil }
-        return try? decoder.decode(UsageSnapshot.self, from: data)
+        read(fileName, from: override)
     }
 
-    /// Writes through a temporary file so a reader never sees a half written snapshot.
     static func save(_ snapshot: UsageSnapshot, to override: URL? = nil) throws {
+        try write(snapshot, as: fileName, to: override)
+    }
+
+    static func loadSamples(from override: URL? = nil) -> [UsageSample] {
+        read(samplesFileName, from: override) ?? []
+    }
+
+    static func saveSamples(_ samples: [UsageSample], to override: URL? = nil) throws {
+        try write(samples, as: samplesFileName, to: override)
+    }
+
+    private static func read<T: Decodable>(_ name: String, from override: URL?) -> T? {
+        let url = (override ?? directory).appending(path: name)
+        guard let data = try? Data(contentsOf: url) else { return nil }
+        return try? decoder.decode(T.self, from: data)
+    }
+
+    /// Writes through a temporary file so a reader never sees a half written file.
+    private static func write<T: Encodable>(_ value: T, as name: String, to override: URL?) throws {
         let dir = override ?? directory
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        let tmp = dir.appending(path: ".\(fileName).tmp")
-        try encoder.encode(snapshot).write(to: tmp)
-        _ = try FileManager.default.replaceItemAt(dir.appending(path: fileName), withItemAt: tmp)
+        let tmp = dir.appending(path: ".\(name).tmp")
+        try encoder.encode(value).write(to: tmp)
+        _ = try FileManager.default.replaceItemAt(dir.appending(path: name), withItemAt: tmp)
     }
 }

@@ -49,7 +49,9 @@ struct MenuBarPanel: View {
 
             if let snapshot = model.snapshot, !snapshot.buckets.isEmpty {
                 VStack(spacing: 10) {
-                    ForEach(snapshot.buckets) { UsageBar(bucket: $0, display: model.percentDisplay) }
+                    ForEach(snapshot.buckets) {
+                        UsageBar(bucket: $0, display: model.percentDisplay, showsProjection: true)
+                    }
                 }
                 UsageFooter(snapshot: snapshot)
             } else if let error = model.snapshot?.error {

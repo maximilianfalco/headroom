@@ -14,27 +14,48 @@ enum PercentDisplay: String, Codable, CaseIterable, Identifiable {
 
     var id: String { rawValue }
     var label: String { self == .used ? "Used" : "Remaining" }
+
+    /// Flips a used percent to whichever way is on screen. A limit can report over 100,
+    /// so headroom floors at zero.
+    func percent(of used: Int) -> Int { self == .used ? used : max(0, 100 - used) }
+
+    /// Only remaining says which it is, because a bare percentage already reads as used.
+    func text(of used: Int) -> String {
+        self == .used ? "\(used)%" : "\(percent(of: used))% left"
+    }
 }
 
 struct UsageBucket: Codable, Identifiable, Equatable {
+    /// The five hour limit. The only one the local logs are aligned to.
+    static let sessionKey = "five_hour"
+
     var key: String
     var label: String
     var percent: Int
     var resetsAt: Date?
+    var projected: Int?
 
     var id: String { key }
     /// Deliberately not routed through `shown`: colour says how close the cap is, so a panel
     /// reading "93% left" still shows green.
     var severity: Severity { Severity(percent: percent) }
 
-    /// The number to put on screen. A limit can report over 100, so headroom floors at zero.
-    func shown(_ display: PercentDisplay) -> Int {
-        display == .used ? percent : max(0, 100 - percent)
+    /// The number to put on screen.
+    func shown(_ display: PercentDisplay) -> Int { display.percent(of: percent) }
+
+    func shownText(_ display: PercentDisplay) -> String { display.text(of: percent) }
+
+    /// The projection on the bar's axis, so the marker lands where the bar will.
+    func shownProjection(_ display: PercentDisplay) -> Int? {
+        projected.map(display.percent(of:))
     }
 
-    /// Only remaining says which it is, because a bare percentage already reads as used.
-    func shownText(_ display: PercentDisplay) -> String {
-        display == .used ? "\(percent)%" : "\(shown(.remaining))% left"
+    func projectionText(_ display: PercentDisplay) -> String? {
+        guard let projected, projected > percent,
+              let resetsAt, resetsAt > .now, let resetsIn
+        else { return nil }
+        if projected >= 100 { return "Expected to hit the limit before it resets" }
+        return "~\(display.text(of: projected)) when this resets in \(resetsIn)"
     }
 
     /// The countdown as it appears on screen. Notifications word it their own way and use
