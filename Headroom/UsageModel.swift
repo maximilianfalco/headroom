@@ -16,6 +16,10 @@ final class UsageModel: ObservableObject {
             republish()
         }
     }
+    /// Key of the limit the menu bar shows. Empty means whichever is highest.
+    @Published var menuBarLimit = UserDefaults.standard.string(forKey: "menuBarLimit") ?? "" {
+        didSet { UserDefaults.standard.set(menuBarLimit, forKey: "menuBarLimit") }
+    }
     @Published var spriteKind = UsageModel.stored(SpriteKind.self, "spriteKind") ?? .plant {
         didSet { UserDefaults.standard.set(spriteKind.rawValue, forKey: "spriteKind") }
     }

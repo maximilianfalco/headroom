@@ -8,7 +8,8 @@ struct HeadroomApp: App {
         MenuBarExtra {
             MenuBarPanel(model: model)
         } label: {
-            MenuBarLabel(snapshot: model.snapshot, display: model.percentDisplay)
+            MenuBarLabel(bucket: model.snapshot?.limit(model.menuBarLimit),
+                         display: model.percentDisplay)
         }
         .menuBarExtraStyle(.window)
 
@@ -19,16 +20,16 @@ struct HeadroomApp: App {
 }
 
 private struct MenuBarLabel: View {
-    let snapshot: UsageSnapshot?
+    let bucket: UsageBucket?
     let display: PercentDisplay
 
     var body: some View {
-        if let worst = snapshot?.worst {
+        if let bucket {
             // One font on the stack so the symbol shares the text baseline and scale.
             HStack(spacing: 3) {
-                Image(systemName: worst.severity == .normal ? "circle.fill" : "exclamationmark.circle.fill")
+                Image(systemName: bucket.severity == .normal ? "circle.fill" : "exclamationmark.circle.fill")
                     .imageScale(.small)
-                Text(worst.shownText(display))
+                Text(bucket.shownText(display))
                     .monospacedDigit()
             }
             .font(.system(size: 12, weight: .medium))

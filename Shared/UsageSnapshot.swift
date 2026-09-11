@@ -102,6 +102,11 @@ struct UsageSnapshot: Codable, Equatable {
         buckets.max { $0.percent < $1.percent }
     }
 
+    /// The limit with this key, or the highest one when none is picked or it has gone away.
+    func limit(_ key: String?) -> UsageBucket? {
+        buckets.first { $0.key == key } ?? worst
+    }
+
     static let placeholder = UsageSnapshot(
         fetchedAt: .now,
         buckets: [
