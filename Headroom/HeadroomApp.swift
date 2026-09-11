@@ -4,6 +4,11 @@ import SwiftUI
 struct HeadroomApp: App {
     @StateObject private var model = UsageModel()
 
+    init() {
+        // A mouse makes macOS draw thick legacy scrollers. Thin overlay ones fit a small panel.
+        UserDefaults.standard.set("WhenScrolling", forKey: "AppleShowScrollBars")
+    }
+
     var body: some Scene {
         MenuBarExtra {
             MenuBarPanel(model: model)
