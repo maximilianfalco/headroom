@@ -161,6 +161,18 @@ struct UsageSnapshotTests {
         #expect(snapshot.worst?.percent == 91)
     }
 
+    @Test("limit picks by key")
+    func limitPicksByKey() {
+        let snapshot = UsageSnapshot(fetchedAt: .now, buckets: [bucket(4), bucket(91), bucket(60)])
+        #expect(snapshot.limit("k4")?.percent == 4)
+    }
+
+    @Test(arguments: ["", "gone", nil] as [String?])
+    func limitFallsBackToWorst(key: String?) {
+        let snapshot = UsageSnapshot(fetchedAt: .now, buckets: [bucket(4), bucket(91), bucket(60)])
+        #expect(snapshot.limit(key)?.percent == 91)
+    }
+
     @Test("a snapshot written before local usage existed still decodes")
     func decodesSnapshotWithoutLocalUsage() throws {
         let json = """

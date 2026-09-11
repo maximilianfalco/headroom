@@ -103,6 +103,9 @@ rather than re-reading it every minute, so that asks about once an hour, not onc
 The gear in the panel opens Settings, or press Cmd+comma. Sprite choice and notifications live
 there, with a live preview of the sprite so you can see what you are picking.
 
+The number in the menu bar follows whichever limit is highest by default. You can pin it to one
+limit instead, such as your session or a per-model cap, under Menu bar.
+
 ## Install
 
 ```sh

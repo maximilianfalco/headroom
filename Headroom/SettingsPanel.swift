@@ -6,14 +6,16 @@ struct SettingsPanel: View {
     @ObservedObject var model: UsageModel
 
     var body: some View {
-        HStack(alignment: .top, spacing: 0) {
-            form
-            // The popover dismisses the moment this window takes focus, so the choice has to
-            // be previewable here or it cannot be seen while it is being made.
-            preview
+        ScrollView {
+            HStack(alignment: .top, spacing: 0) {
+                form
+                // The popover dismisses the moment this window takes focus, so the choice has
+                // to be previewable here or it cannot be seen while it is being made.
+                preview
+            }
+            .frame(width: 520)
+            .fixedSize(horizontal: false, vertical: true)
         }
-        .frame(width: 520)
-        .fixedSize(horizontal: false, vertical: true)
     }
 
     private var preview: some View {
@@ -31,6 +33,16 @@ struct SettingsPanel: View {
         .padding(.trailing, 20)
     }
 
+    private var buckets: [UsageBucket] { model.snapshot?.buckets ?? [] }
+
+    /// A picked limit that is not in the snapshot reads as highest, which is what it shows.
+    private var menuBarLimit: Binding<String> {
+        Binding(
+            get: { buckets.contains { $0.key == model.menuBarLimit } ? model.menuBarLimit : "" },
+            set: { model.menuBarLimit = $0 }
+        )
+    }
+
     private var form: some View {
         Form {
             Section("Percentages") {
@@ -40,6 +52,18 @@ struct SettingsPanel: View {
                 Text(model.percentDisplay == .used
                      ? "How much of each limit you have spent."
                      : "How much of each limit you have left. Colours still warn near the cap.")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+            }
+
+            Section("Menu bar") {
+                Picker("Show", selection: menuBarLimit) {
+                    Text("Highest limit").tag("")
+                    ForEach(buckets) { Text($0.label).tag($0.key) }
+                }
+                Text(menuBarLimit.wrappedValue.isEmpty
+                     ? "Whichever limit is closest to its cap."
+                     : "Always this limit, even when another is closer to its cap.")
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
             }
@@ -75,6 +99,7 @@ struct SettingsPanel: View {
             }
         }
         .formStyle(.grouped)
+        .scrollDisabled(true)
         .frame(width: 400)
     }
 }
