@@ -6,14 +6,16 @@ struct SettingsPanel: View {
     @ObservedObject var model: UsageModel
 
     var body: some View {
-        HStack(alignment: .top, spacing: 0) {
-            form
-            // The popover dismisses the moment this window takes focus, so the choice has to
-            // be previewable here or it cannot be seen while it is being made.
-            preview
+        ScrollView {
+            HStack(alignment: .top, spacing: 0) {
+                form
+                // The popover dismisses the moment this window takes focus, so the choice has
+                // to be previewable here or it cannot be seen while it is being made.
+                preview
+            }
+            .frame(width: 520)
+            .fixedSize(horizontal: false, vertical: true)
         }
-        .frame(width: 520)
-        .fixedSize(horizontal: false, vertical: true)
     }
 
     private var preview: some View {
@@ -97,6 +99,7 @@ struct SettingsPanel: View {
             }
         }
         .formStyle(.grouped)
+        .scrollDisabled(true)
         .frame(width: 400)
     }
 }
