@@ -7,6 +7,17 @@ final class UsageModel: ObservableObject {
     @Published private(set) var snapshot: UsageSnapshot?
     @Published private(set) var isRefreshing = false
     @Published private(set) var notificationsDenied = false
+    @Published var provider = UsageModel.stored(UsageSource.self, "usageProvider") ?? .claude {
+        didSet {
+            guard provider != oldValue else { return }
+            UserDefaults.standard.set(provider.rawValue, forKey: "usageProvider")
+            menuBarLimit = UserDefaults.standard.string(forKey: menuBarLimitKey) ?? ""
+            snapshot = UsageStore.load(provider: provider)
+                ?? UsageSnapshot(fetchedAt: .now, buckets: [], provider: provider)
+            republish()
+            Task { await refresh() }
+        }
+    }
     @Published var notificationsEnabled = UsageNotifier.isEnabled {
         didSet { UsageNotifier.isEnabled = notificationsEnabled }
     }
@@ -18,8 +29,9 @@ final class UsageModel: ObservableObject {
     }
     /// Key of the limit the menu bar shows. Empty means whichever is highest.
     @Published var menuBarLimit = UserDefaults.standard.string(forKey: "menuBarLimit") ?? "" {
-        didSet { UserDefaults.standard.set(menuBarLimit, forKey: "menuBarLimit") }
+        didSet { UserDefaults.standard.set(menuBarLimit, forKey: menuBarLimitKey) }
     }
+    private var menuBarLimitKey: String { provider == .claude ? "menuBarLimit" : "codexMenuBarLimit" }
     @Published var spriteKind = UsageModel.stored(SpriteKind.self, "spriteKind") ?? .plant {
         didSet { UserDefaults.standard.set(spriteKind.rawValue, forKey: "spriteKind") }
     }
@@ -55,7 +67,8 @@ final class UsageModel: ObservableObject {
     private var poller: Task<Void, Never>?
 
     init() {
-        snapshot = UsageStore.load()
+        snapshot = UsageStore.load(provider: provider)
+        menuBarLimit = UserDefaults.standard.string(forKey: menuBarLimitKey) ?? ""
         LegacyTokenMirror.remove()
         // Kept off the poll loop because the authorization prompt blocks until the user answers.
         Task { await UsageNotifier.requestAuthorization() }
@@ -71,30 +84,41 @@ final class UsageModel: ObservableObject {
 
     func refresh() async {
         guard !isRefreshing else { return }
+        let source = provider
         isRefreshing = true
-        defer { isRefreshing = false }
+        defer {
+            isRefreshing = false
+            if provider != source { Task { await refresh() } }
+        }
 
         do {
-            var fresh = try await UsageFetcher.fetch()
+            var fresh: UsageSnapshot
+            switch source {
+            case .claude: fresh = try await UsageFetcher.fetch()
+            case .codex: fresh = try await CodexUsageFetcher.fetch()
+            }
             fresh.display = percentDisplay
             fresh.local = await localUsage(for: fresh)
-            let samples = Projection.apply(to: &fresh, history: UsageStore.loadSamples(), now: .now)
+            guard provider == source else { return }
+            let samples = Projection.apply(to: &fresh, history: UsageStore.loadSamples(provider: source), now: .now)
             // The marker is an extra, so a history that cannot be kept only costs the projection.
-            try? UsageStore.saveSamples(samples)
+            try? UsageStore.saveSamples(samples, provider: source)
             // Surface store failures too, otherwise the widget silently shows nothing.
             do { try UsageStore.save(fresh) }
             catch { fresh.error = "Snapshot not saved: \(error.localizedDescription)" }
             snapshot = fresh
             await UsageNotifier.evaluate(fresh)
         } catch {
+            guard provider == source else { return }
             // Keep the last good numbers on screen and annotate them rather than blanking out.
-            let previous = snapshot ?? UsageSnapshot(fetchedAt: .now, buckets: [])
+            let previous = snapshot ?? UsageSnapshot(fetchedAt: .now, buckets: [], provider: source)
             var annotated = UsageSnapshot(fetchedAt: previous.fetchedAt,
                                           buckets: previous.buckets,
-                                          error: error.localizedDescription)
+                                          error: error.localizedDescription, provider: source)
             annotated.display = percentDisplay
             // The logs need no credentials, so these numbers survive a failed fetch.
             annotated.local = await localUsage(for: previous)
+            guard provider == source else { return }
             snapshot = annotated
             try? UsageStore.save(annotated)
         }
@@ -104,6 +128,10 @@ final class UsageModel: ObservableObject {
     }
 
     private func localUsage(for snapshot: UsageSnapshot) async -> LocalUsage? {
+        if snapshot.source == .codex {
+            let resets = snapshot.buckets.first { $0.windowDuration == Config.sessionWindow }?.resetsAt
+            return await CodexLocalUsageReader.shared.usage(sessionEndsAt: resets, now: .now)
+        }
         let resets = snapshot.buckets.first { $0.key == UsageBucket.sessionKey }?.resetsAt
         return await LocalUsageReader.shared.usage(sessionEndsAt: resets, now: .now)
     }

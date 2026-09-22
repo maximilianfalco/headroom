@@ -45,19 +45,20 @@ enum Projection {
     /// that no pace means anything yet.
     static func project(_ bucket: UsageBucket, samples: [UsageSample], cost: Double?, now: Date) -> Int? {
         guard let resetsAt = bucket.resetsAt, resetsAt > now else { return nil }
-        let window = window(for: bucket.key)
+        guard let window = bucket.windowDuration ?? (bucket.provider == .codex ? nil : window(for: bucket.key)),
+              window.isFinite, window > 0 else { return nil }
         let remaining = resetsAt.timeIntervalSince(now)
         let elapsed = window - remaining
         guard elapsed >= window * Config.projectionWarmup else { return nil }
 
         var rate = Double(bucket.percent) / elapsed
-        if bucket.key == sessionKey {
+        if bucket.key == sessionKey || (bucket.provider == .codex && window <= Config.sessionWindow) {
             let trailing = samples.filter {
-                $0.key == sessionKey && sameWindow($0.resetsAt, resetsAt)
+                $0.key == bucket.key && sameWindow($0.resetsAt, resetsAt)
                     && now.timeIntervalSince($0.at) <= Config.projectionTrailing
             }
             let trend = pace(trailing, current: bucket.percent, now: now) ?? rate
-            if let burn = burn(trailing, cost: cost, ratio: ratio(samples), now: now) {
+            if bucket.key == sessionKey, let burn = burn(trailing, cost: cost, ratio: ratio(samples), now: now) {
                 rate = (trend + burn) / 2
             } else {
                 rate = trend

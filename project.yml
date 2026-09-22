@@ -54,6 +54,9 @@ targets:
         excludes:
           - "**/*.md"
           - UsageFetcher.swift
+          - CodexUsageFetcher.swift
+          - CodexLocalUsageReader.swift
+          - CodexModelPricing.swift
           - LegacyTokenMirror.swift
           - LocalUsageReader.swift
           - ModelPricing.swift

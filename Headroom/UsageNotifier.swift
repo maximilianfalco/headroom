@@ -26,7 +26,7 @@ enum UsageNotifier {
 
     static func evaluate(_ snapshot: UsageSnapshot) async {
         guard isEnabled else { return }
-        let previous = loadPrevious()
+        let previous = loadPrevious(provider: snapshot.source)
         await notifyResets(snapshot, previous: previous)
         await notifyThresholds(snapshot)
         savePrevious(snapshot)
@@ -87,7 +87,7 @@ enum UsageNotifier {
         content.title = threshold >= 100
             ? "\(bucket.label) limit reached"
             : "\(bucket.label) at \(bucket.shownText(display))"
-        content.body = bucket.resetsIn.map { "Resets in \($0)." } ?? "Claude plan usage."
+        content.body = bucket.resetsIn.map { "Resets in \($0)." } ?? "Plan usage."
         if threshold >= Config.soundAt { content.sound = .default }
 
         let request = UNNotificationRequest(
@@ -97,8 +97,9 @@ enum UsageNotifier {
 
     // MARK: - Previous snapshot
 
-    private static func loadPrevious() -> UsageSnapshot? {
-        guard let data = UserDefaults.standard.data(forKey: previousKey) else { return nil }
+    private static func loadPrevious(provider: UsageSource) -> UsageSnapshot? {
+        let key = provider == .claude ? previousKey : "codexPreviousSnapshot"
+        guard let data = UserDefaults.standard.data(forKey: key) else { return nil }
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
         return try? decoder.decode(UsageSnapshot.self, from: data)
@@ -108,6 +109,7 @@ enum UsageNotifier {
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
         guard let data = try? encoder.encode(snapshot) else { return }
-        UserDefaults.standard.set(data, forKey: previousKey)
+        let key = snapshot.source == .claude ? previousKey : "codexPreviousSnapshot"
+        UserDefaults.standard.set(data, forKey: key)
     }
 }
