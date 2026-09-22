@@ -2,6 +2,7 @@ import SwiftUI
 
 struct MenuBarPanel: View {
     @Environment(\.openSettings) private var openSettings
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @ObservedObject var model: UsageModel
 
     var body: some View {
@@ -18,6 +19,8 @@ struct MenuBarPanel: View {
     private var sprite: some View {
         SpriteView(kind: model.spriteKind, fill: model.worstFill,
                    danger: model.worstDanger, motion: model.spriteMotion)
+            .animation(reduceMotion ? nil : .easeInOut(duration: 1.2),
+                       value: AnimatablePair(model.worstFill, model.worstDanger))
     }
 
     private var panel: some View {

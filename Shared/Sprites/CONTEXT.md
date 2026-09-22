@@ -13,6 +13,10 @@ Two places, both going through `SpriteView`:
 They are different sizes on purpose, which is why `draw` must read `frame.columns` and
 `frame.rows` rather than assume a grid.
 
+The panel eases changes in fill and danger over 1.2 seconds, including provider switches.
+`SpriteView` exposes both as animatable values so its canvas receives the values between
+the old and new levels. Reduce Motion skips this transition.
+
 ## Why the level is passed in rather than computed
 
 An earlier version had each sprite derive its own growth from elapsed time. That looked fine in
