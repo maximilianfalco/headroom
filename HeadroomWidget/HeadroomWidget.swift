@@ -136,7 +136,7 @@ struct HeadroomWidget: Widget {
                 .containerBackground(.fill.tertiary, for: .widget)
         }
         .configurationDisplayName("Headroom")
-        .description("Current usage against your Claude plan limits.")
+        .description("Current Claude or Codex limits. Follows the provider selected in Headroom.")
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
     }
 }

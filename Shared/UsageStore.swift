@@ -56,16 +56,26 @@ enum UsageStore {
         read(fileName, from: override)
     }
 
+    static func load(provider: UsageSource, from override: URL? = nil) -> UsageSnapshot? {
+        if let cached: UsageSnapshot = read("\(provider.rawValue)-usage.json", from: override) {
+            return cached
+        }
+        let current = load(from: override)
+        return current?.source == provider ? current : nil
+    }
+
     static func save(_ snapshot: UsageSnapshot, to override: URL? = nil) throws {
+        try write(snapshot, as: "\(snapshot.source.rawValue)-usage.json", to: override)
         try write(snapshot, as: fileName, to: override)
     }
 
-    static func loadSamples(from override: URL? = nil) -> [UsageSample] {
-        read(samplesFileName, from: override) ?? []
+    static func loadSamples(provider: UsageSource = .claude, from override: URL? = nil) -> [UsageSample] {
+        read(provider == .claude ? samplesFileName : "codex-samples.json", from: override) ?? []
     }
 
-    static func saveSamples(_ samples: [UsageSample], to override: URL? = nil) throws {
-        try write(samples, as: samplesFileName, to: override)
+    static func saveSamples(_ samples: [UsageSample], provider: UsageSource = .claude,
+                            to override: URL? = nil) throws {
+        try write(samples, as: provider == .claude ? samplesFileName : "codex-samples.json", to: override)
     }
 
     private static func read<T: Decodable>(_ name: String, from override: URL?) -> T? {

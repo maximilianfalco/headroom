@@ -1,5 +1,12 @@
 import Foundation
 
+enum UsageSource: String, Codable, CaseIterable, Identifiable {
+    case claude, codex
+
+    var id: String { rawValue }
+    var label: String { self == .claude ? "Claude" : "Codex" }
+}
+
 enum Severity: String, Codable {
     case normal, warning, critical
 
@@ -34,6 +41,8 @@ struct UsageBucket: Codable, Identifiable, Equatable {
     var percent: Int
     var resetsAt: Date?
     var projected: Int?
+    var windowDuration: TimeInterval?
+    var provider: UsageSource?
 
     var id: String { key }
     /// Deliberately not routed through `shown`: colour says how close the cap is, so a panel
@@ -85,6 +94,9 @@ struct LocalUsage: Codable, Equatable {
     var sessionCached: Int
     var sessionCost: Double
     var newPerMinute: Double
+    var sessionLabel: String?
+    var todayCostComplete: Bool?
+    var sessionCostComplete: Bool?
 }
 
 struct UsageSnapshot: Codable, Equatable {
@@ -97,6 +109,9 @@ struct UsageSnapshot: Codable, Equatable {
     /// The widget cannot see the app's settings, so the choice travels with the data it draws.
     /// Optional so a snapshot written before this existed still decodes.
     var display: PercentDisplay?
+    var provider: UsageSource?
+
+    var source: UsageSource { provider ?? .claude }
 
     var worst: UsageBucket? {
         buckets.max { $0.percent < $1.percent }

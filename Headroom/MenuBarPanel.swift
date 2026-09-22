@@ -47,6 +47,8 @@ struct MenuBarPanel: View {
                 .disabled(model.isRefreshing)
             }
 
+            providerPicker
+
             if let snapshot = model.snapshot, !snapshot.buckets.isEmpty {
                 VStack(spacing: 10) {
                     ForEach(snapshot.buckets) {
@@ -56,6 +58,10 @@ struct MenuBarPanel: View {
                 UsageFooter(snapshot: snapshot)
             } else if let error = model.snapshot?.error {
                 UsageUnavailable(message: error)
+            } else if model.provider == .codex, model.snapshot != nil, !model.isRefreshing {
+                Text("No time-based Codex limits reported")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
             } else {
                 Text("Loading usage...")
                     .font(.system(size: 11))
@@ -94,14 +100,45 @@ struct MenuBarPanel: View {
                 .font(.system(size: 9, weight: .semibold))
                 .foregroundStyle(.tertiary)
                 .tracking(0.8)
-            usageRow("Session", tokens: local.sessionNew, cost: local.sessionCost)
-            usageRow("Today", tokens: local.todayNew, cost: local.todayCost)
-            detailRow("Cache reads", "\(Self.compact(local.sessionCached)) this session")
+            usageRow(local.sessionLabel ?? "Session", tokens: local.sessionNew,
+                     cost: local.sessionCostComplete == false ? nil : local.sessionCost)
+            usageRow("Today", tokens: local.todayNew,
+                     cost: local.todayCostComplete == false ? nil : local.todayCost)
+            detailRow("Cache reads", "\(Self.compact(local.sessionCached)) \(local.sessionLabel == "Last 5h" ? "last 5h" : "this session")")
             detailRow("Burn rate", "\(Self.compact(Int(local.newPerMinute))) new/min")
-            Text("new tokens; cost at API list prices")
+            Text(model.provider == .codex
+                 ? "new tokens; estimated API cost (standard)"
+                 : "new tokens; cost at API list prices")
                 .font(.system(size: 9))
                 .foregroundStyle(.tertiary)
         }
+    }
+
+    private var providerPicker: some View {
+        HStack(spacing: 6) {
+            ForEach(UsageSource.allCases) { source in
+                Button { model.provider = source } label: {
+                    Image(source == .claude ? "ClaudeLogo" : "OpenAILogo")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 18, height: 18)
+                        .frame(width: 34, height: 30)
+                        .contentShape(RoundedRectangle(cornerRadius: 6))
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 6)
+                                .strokeBorder(.primary.opacity(model.provider == source ? 0.45 : 0), lineWidth: 1)
+                        }
+                }
+                .buttonStyle(.plain)
+                .help(source.label)
+                .accessibilityLabel(source.label)
+                .accessibilityAddTraits(model.provider == source ? .isSelected : [])
+            }
+        }
+        .padding(.leading, -8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Usage provider")
     }
 
     private func detailRow(_ label: String, _ value: String) -> some View {
@@ -116,7 +153,7 @@ struct MenuBarPanel: View {
         }
     }
 
-    private func usageRow(_ label: String, tokens: Int, cost: Double) -> some View {
+    private func usageRow(_ label: String, tokens: Int, cost: Double?) -> some View {
         HStack(spacing: 6) {
             Text(label)
                 .font(.system(size: 12, weight: .medium))
@@ -126,7 +163,7 @@ struct MenuBarPanel: View {
                 .foregroundStyle(.secondary)
                 .monospacedDigit()
             // List prices are USD, so pin the locale. A non-US one renders "USD 12.34".
-            Text(cost.formatted(.currency(code: "USD").locale(Locale(identifier: "en_US"))))
+            Text(cost.map { $0.formatted(.currency(code: "USD").locale(Locale(identifier: "en_US"))) } ?? "N/A")
                 .font(.system(size: 12, weight: .semibold, design: .rounded))
                 .monospacedDigit()
                 .lineLimit(1)
