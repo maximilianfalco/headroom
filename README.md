@@ -4,7 +4,7 @@
 
 # Headroom
 
-**How much of your Claude plan is left, at a glance.**
+**How much of your Claude or Codex plan is left, at a glance.**
 
 ![macOS](https://img.shields.io/badge/macOS-14%2B-blue)
 ![Swift](https://img.shields.io/badge/Swift-5-orange)
@@ -15,23 +15,27 @@
 
 </div>
 
-A menu bar app and a desktop widget. They show how much of your Claude plan you have used, how
-many tokens you have spent, and what that work would cost on the API.
+A menu bar app and a desktop widget. They show how much of your Claude or Codex plan you have
+used. Both also show local token counts and what that work would cost on the API.
 
-Every 60 seconds Headroom asks Anthropic how much of your plan is left, and reads Claude Code's
-own log files for your token counts. The menu bar shows what is left. The widget shows the same
-thing on your desktop.
+Choose Claude or Codex in the panel. Every 60 seconds Headroom reads the selected provider's
+limits. The menu bar and desktop widget follow that choice. Each provider keeps its own last
+reading, history, and pinned menu bar limit.
 
 ## What you see
 
-**In the menu bar**, a bar for each limit: your five hour session, your week, and each per-model
-cap. Each one shows how far along you are and when it resets. Below that, tokens and cost for
-this session and for today, plus how fast you are spending them.
+**In the menu bar**, a bar for each reported limit, with its percentage and reset time. Claude
+usually reports a five hour session, a week, and per-model limits. Codex's windows depend on
+your account: a weekly-only account gets one weekly bar. A session or separate model limit,
+such as Astra, appears only if Codex returns it. Below the bars are tokens and cost for
+this session and today, plus how fast you are spending them. Codex shows "Last 5h" when the
+account has no active five-hour session window.
 
 A small flame on a bar marks where that limit is expected to be when it resets, worked out
-from how fast it has been climbing and how fast Claude Code has been spending lately.
+from how fast it has been climbing. Claude's session also uses recent local spending.
 Hover it for the number. A flame sitting where the bar runs out means you are on track to hit
-the limit before the reset. The flame stays hidden while nothing is moving.
+the limit before the reset. The flame stays hidden while nothing is moving. Both providers wait
+for 3% of a window before showing its projection, about five hours for a weekly limit.
 
 **On the desktop**, pick a size. Small shows your worst limit as a ring. Medium lists every
 limit as bars. Large leads with a ring and lists the rest below it. Right click the desktop and
@@ -39,29 +43,40 @@ pick Edit Widgets, or open Notification Center, then search for "Headroom".
 
 <img src="assets/desktop-widget.png" width="420" alt="The medium widget on the desktop">
 
-You can also pick which limit a widget follows, or leave it on whichever is highest.
+You can also pick which limit a widget follows, or leave it on whichever is highest. The widget
+uses the provider selected in the app. If a pinned limit is absent, it shows the highest one.
 
 ## What counts
 
 The two halves of the panel are not measuring the same thing, which is worth knowing before you
 read too much into either.
 
-**The bars are your whole plan.** They come from Anthropic and cover everything on your account
-that counts toward the five hour and weekly windows. Work you do on claude.ai or in Claude
-Desktop moves them too, not just Claude Code.
+**The bars come from your provider.** Claude's bars cover account usage that counts toward its
+five hour and weekly windows, including claude.ai and Claude Desktop. Codex's bars come from
+the signed-in Codex account's rate limits, not from adding up local session logs.
 
-**The tokens and cost are Claude Code only.** They are read from `~/.claude/projects/`, which is
-where the Claude Code CLI writes its session logs. Nothing else is counted.
+**The tokens and cost come from local logs.** Claude reads `~/.claude/projects/`. Codex reads
+response records in `~/.codex/sessions/` and `~/.codex/archived_sessions/`, or the same folders
+under `CODEX_HOME`. Cached input is shown separately. Reasoning tokens are already part of
+output and are counted once. Forked history and repeated responses are not added again.
 
 So the bars answer "how much of my plan is gone" and the numbers answer "how much of that was
-the CLI".
+the local tools".
 
 One gap that follows from this: **Claude Code run inside Claude Desktop is not counted.** Those
 sessions log somewhere else, under `~/Library/Application Support/Claude/`. They still move the
 bars, because Anthropic counts them, but they will not show up in your token or cost figures. If
 you work mostly in Desktop, your real numbers are higher than what you see here.
 
-Headroom does not read Codex, Gemini, Cursor, or any other tool. Claude only.
+Codex needs recent logs containing per-response usage records. Older `token_count` snapshots
+are skipped because they can repeat or contain context estimates. Compressed logs and cloud
+work without local records are not included. Codex dollar figures use the model recorded for
+the turn and standard API prices, including cache writes and long-context rates. They exclude
+Fast mode premiums and tool fees. Unknown models show N/A for cost, while tokens still count.
+Prices were checked against [OpenAI's pricing](https://developers.openai.com/api/docs/pricing)
+and the [GPT-5.5](https://developers.openai.com/api/docs/models/gpt-5.5) and
+[GPT-5.4](https://developers.openai.com/api/docs/models/gpt-5.4) pages on September 22, 2026.
+Headroom does not read Gemini or Cursor usage.
 
 ## The sprite
 
@@ -90,13 +105,18 @@ arm themselves again when the limit resets. Turn them off from the menu bar pane
 
 ## First run
 
-Nothing to set up, and no keychain password to type. Headroom reads your Claude Code login
+For Claude, there is nothing to set up, and no keychain password to type. Headroom reads your Claude Code login
 through the same `security` tool Claude Code used to save it, so macOS already trusts the
 asker and leaves you alone.
 
 The one exception is a login keychain you have locked yourself, which nothing can read
 without your password, Claude Code included. Headroom holds the token until it expires
 rather than re-reading it every minute, so that asks about once an hour, not once a poll.
+
+For Codex, install a recent Codex CLI and sign in with your ChatGPT account using `codex login`.
+Choose Codex in Headroom. It finds `codex` on its PATH, in the standard Homebrew locations, or
+inside `/Applications/Codex.app`. The CLI handles its own saved login and token refresh.
+An API-key login does not provide these ChatGPT plan limits.
 
 ## Settings
 
@@ -131,20 +151,22 @@ Adding your own sprite takes one file and two lines. See `Shared/Sprites/README.
 
 ## Privacy
 
-- **Your numbers stay on your Mac.** Token counts and cost come from Claude Code's own log
-  files in `~/.claude/projects/`. Headroom pulls out numbers only: how many tokens, which
+- **Your numbers stay on your Mac.** Token counts and cost come from Claude Code's and Codex's
+  local log files. Headroom pulls out numbers only: how many tokens, which
   model, when, and an id it uses to skip repeats. It never keeps what you or Claude typed, and
   it never keeps which project you were in.
-- **One server, one call.** Headroom talks to `api.anthropic.com` and nothing else. No update
-  check, no analytics, no crash reports. The call sends your token so the server knows who is
-  asking. It sends nothing else.
+- **Provider reads.** Claude uses `api.anthropic.com`. Codex runs the installed CLI's app server
+  briefly and asks `account/rateLimits/read`; the CLI contacts OpenAI. This starts no model
+  turn and sends no project files or prompts. Headroom adds no analytics or crash reports.
 - **Keychain.** Headroom reads Claude Code's saved login with the `security` tool, the same one
   Claude Code saves it with. It writes no copy of its own: the token is held in memory until it
   expires, and never lands on disk.
-- **What it saves.** Two small files, plus a few notification settings. One holds your current
-  percentages, token counts, and cost. The other is a day of history for the flame: for each
-  limit, the time of each poll, its percentage, and when it resets, plus what the session has
-  cost so far. Anything older than a day is dropped. Nothing else.
+- **Codex login.** Headroom does not read or copy Codex credentials. Codex uses its own login
+  store and may refresh it while reading limits.
+- **What it saves.** A current snapshot for the widget, a cached snapshot per provider, and a
+  day of history per provider for the flame. These hold percentages, reset times, window
+  lengths, and local token counts and cost, plus notification settings. Codex limit
+  keys include a hash of the account ID when returned, so account histories stay separate.
 - **Why it is not sandboxed.** A sandboxed app cannot reach another app's login. The
   widget *is* sandboxed. It only reads that small file, and it carries none of the code that
   handles logins or reads logs.
@@ -154,8 +176,8 @@ Adding your own sprite takes one file and two lines. See `Shared/Sprites/README.
 MIT, see [LICENSE](LICENSE). That covers the code in this repo. It gives you no rights to
 anyone else's name, service, or data.
 
-Headroom is a personal project. Anthropic did not build it, back it, or review it. "Claude" and
-"Anthropic" are their names, not this project's.
+Headroom is a personal project. Anthropic and OpenAI did not build it, back it, or review it.
+Their product names and logos belong to them. See [logo sources and notices](assets/provider-logos.md).
 
 - It reads an endpoint Anthropic has not documented. They can change or drop it any day.
 - It only ever reads your own login and your own logs, on your own Mac.
