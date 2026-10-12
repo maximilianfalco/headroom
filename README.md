@@ -120,7 +120,7 @@ limit instead, such as your session or a per-model cap, under Menu bar.
 ## Install
 
 ```sh
-brew install --cask maximilianfalco/headroom/headroom-bar
+brew install --cask maximilianfalco/tap/headroom-bar
 ```
 
 The cask is called `headroom-bar`. Plain `headroom` in Homebrew is a different app
